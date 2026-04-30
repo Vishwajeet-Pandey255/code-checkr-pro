@@ -16,6 +16,7 @@ import { Route as AppResultsRouteImport } from './routes/_app.results'
 import { Route as AppMyScriptsRouteImport } from './routes/_app.my-scripts'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppEvaluateScriptIdRouteImport } from './routes/_app.evaluate.$scriptId'
+import { Route as AppEvaluateScriptIdSummaryRouteImport } from './routes/_app.evaluate.$scriptId.summary'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -51,6 +52,12 @@ const AppEvaluateScriptIdRoute = AppEvaluateScriptIdRouteImport.update({
   path: '/evaluate/$scriptId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEvaluateScriptIdSummaryRoute =
+  AppEvaluateScriptIdSummaryRouteImport.update({
+    id: '/summary',
+    path: '/summary',
+    getParentRoute: () => AppEvaluateScriptIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -58,7 +65,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/my-scripts': typeof AppMyScriptsRoute
   '/results': typeof AppResultsRoute
-  '/evaluate/$scriptId': typeof AppEvaluateScriptIdRoute
+  '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
+  '/evaluate/$scriptId/summary': typeof AppEvaluateScriptIdSummaryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -66,7 +74,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/my-scripts': typeof AppMyScriptsRoute
   '/results': typeof AppResultsRoute
-  '/evaluate/$scriptId': typeof AppEvaluateScriptIdRoute
+  '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
+  '/evaluate/$scriptId/summary': typeof AppEvaluateScriptIdSummaryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -76,7 +85,8 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/my-scripts': typeof AppMyScriptsRoute
   '/_app/results': typeof AppResultsRoute
-  '/_app/evaluate/$scriptId': typeof AppEvaluateScriptIdRoute
+  '/_app/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
+  '/_app/evaluate/$scriptId/summary': typeof AppEvaluateScriptIdSummaryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/my-scripts'
     | '/results'
     | '/evaluate/$scriptId'
+    | '/evaluate/$scriptId/summary'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/my-scripts'
     | '/results'
     | '/evaluate/$scriptId'
+    | '/evaluate/$scriptId/summary'
   id:
     | '__root__'
     | '/'
@@ -104,6 +116,7 @@ export interface FileRouteTypes {
     | '/_app/my-scripts'
     | '/_app/results'
     | '/_app/evaluate/$scriptId'
+    | '/_app/evaluate/$scriptId/summary'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -163,21 +176,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEvaluateScriptIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/evaluate/$scriptId/summary': {
+      id: '/_app/evaluate/$scriptId/summary'
+      path: '/summary'
+      fullPath: '/evaluate/$scriptId/summary'
+      preLoaderRoute: typeof AppEvaluateScriptIdSummaryRouteImport
+      parentRoute: typeof AppEvaluateScriptIdRoute
+    }
   }
 }
+
+interface AppEvaluateScriptIdRouteChildren {
+  AppEvaluateScriptIdSummaryRoute: typeof AppEvaluateScriptIdSummaryRoute
+}
+
+const AppEvaluateScriptIdRouteChildren: AppEvaluateScriptIdRouteChildren = {
+  AppEvaluateScriptIdSummaryRoute: AppEvaluateScriptIdSummaryRoute,
+}
+
+const AppEvaluateScriptIdRouteWithChildren =
+  AppEvaluateScriptIdRoute._addFileChildren(AppEvaluateScriptIdRouteChildren)
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppMyScriptsRoute: typeof AppMyScriptsRoute
   AppResultsRoute: typeof AppResultsRoute
-  AppEvaluateScriptIdRoute: typeof AppEvaluateScriptIdRoute
+  AppEvaluateScriptIdRoute: typeof AppEvaluateScriptIdRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppMyScriptsRoute: AppMyScriptsRoute,
   AppResultsRoute: AppResultsRoute,
-  AppEvaluateScriptIdRoute: AppEvaluateScriptIdRoute,
+  AppEvaluateScriptIdRoute: AppEvaluateScriptIdRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
