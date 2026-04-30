@@ -131,7 +131,7 @@ function Evaluate() {
     await saveScores(scriptId, scores);
     await submitScript(scriptId);
     toast.success("Submitted for review");
-    navigate({ to: "/evaluate/$scriptId/summary", params: { scriptId } });
+    navigate({ to: `/evaluate/${scriptId}/summary` as string });
   };
   const onReject = async () => {
     await rejectScript(scriptId);
