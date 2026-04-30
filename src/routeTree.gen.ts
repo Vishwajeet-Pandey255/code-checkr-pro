@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppMyScriptsRouteImport } from './routes/_app.my-scripts'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppEvaluateScriptIdRouteImport } from './routes/_app.evaluate.$scriptId'
 
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppMyScriptsRoute = AppMyScriptsRouteImport.update({
+  id: '/my-scripts',
+  path: '/my-scripts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -44,12 +50,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AppDashboardRoute
+  '/my-scripts': typeof AppMyScriptsRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard': typeof AppDashboardRoute
+  '/my-scripts': typeof AppMyScriptsRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRoute
 }
 export interface FileRoutesById {
@@ -58,19 +66,26 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/my-scripts': typeof AppMyScriptsRoute
   '/_app/evaluate/$scriptId': typeof AppEvaluateScriptIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/dashboard' | '/evaluate/$scriptId'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/dashboard'
+    | '/my-scripts'
+    | '/evaluate/$scriptId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/dashboard' | '/evaluate/$scriptId'
+  to: '/' | '/login' | '/dashboard' | '/my-scripts' | '/evaluate/$scriptId'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/login'
     | '/_app/dashboard'
+    | '/_app/my-scripts'
     | '/_app/evaluate/$scriptId'
   fileRoutesById: FileRoutesById
 }
@@ -103,6 +118,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/my-scripts': {
+      id: '/_app/my-scripts'
+      path: '/my-scripts'
+      fullPath: '/my-scripts'
+      preLoaderRoute: typeof AppMyScriptsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -122,11 +144,13 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppMyScriptsRoute: typeof AppMyScriptsRoute
   AppEvaluateScriptIdRoute: typeof AppEvaluateScriptIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppMyScriptsRoute: AppMyScriptsRoute,
   AppEvaluateScriptIdRoute: AppEvaluateScriptIdRoute,
 }
 
