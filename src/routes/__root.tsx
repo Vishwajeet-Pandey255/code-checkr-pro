@@ -37,6 +37,10 @@ export const Route = createRootRoute({
       { property: "og:description", content: "Online Script Marking & Copy Checking system." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "IntelliExams OSM — Copy Checking" },
+      { name: "twitter:description", content: "Online Script Marking & Copy Checking system." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3ecb6df4-a6b3-4d15-8ecd-2a6b0bd45916/id-preview-e97bd052--788cb24f-4f7e-4d34-abf9-1024e4335fa4.lovable.app-1777699394536.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3ecb6df4-a6b3-4d15-8ecd-2a6b0bd45916/id-preview-e97bd052--788cb24f-4f7e-4d34-abf9-1024e4335fa4.lovable.app-1777699394536.png" },
     ],
     links: [
       {
