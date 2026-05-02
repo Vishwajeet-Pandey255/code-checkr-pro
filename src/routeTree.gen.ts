@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppResultsRouteImport } from './routes/_app.results'
+import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppMyScriptsRouteImport } from './routes/_app.my-scripts'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppOsmAllocationRouteImport } from './routes/_app.osm.allocation'
@@ -37,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppResultsRoute = AppResultsRouteImport.update({
   id: '/results',
   path: '/results',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyScriptsRoute = AppMyScriptsRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard': typeof AppDashboardRoute
   '/my-scripts': typeof AppMyScriptsRoute
+  '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/master/$name': typeof AppMasterNameRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/dashboard': typeof AppDashboardRoute
   '/my-scripts': typeof AppMyScriptsRoute
+  '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/master/$name': typeof AppMasterNameRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/my-scripts': typeof AppMyScriptsRoute
+  '/_app/reports': typeof AppReportsRoute
   '/_app/results': typeof AppResultsRoute
   '/_app/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/_app/master/$name': typeof AppMasterNameRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard'
     | '/my-scripts'
+    | '/reports'
     | '/results'
     | '/evaluate/$scriptId'
     | '/master/$name'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard'
     | '/my-scripts'
+    | '/reports'
     | '/results'
     | '/evaluate/$scriptId'
     | '/master/$name'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/dashboard'
     | '/_app/my-scripts'
+    | '/_app/reports'
     | '/_app/results'
     | '/_app/evaluate/$scriptId'
     | '/_app/master/$name'
@@ -177,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/results'
       fullPath: '/results'
       preLoaderRoute: typeof AppResultsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-scripts': {
@@ -238,6 +257,7 @@ const AppEvaluateScriptIdRouteWithChildren =
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppMyScriptsRoute: typeof AppMyScriptsRoute
+  AppReportsRoute: typeof AppReportsRoute
   AppResultsRoute: typeof AppResultsRoute
   AppEvaluateScriptIdRoute: typeof AppEvaluateScriptIdRouteWithChildren
   AppMasterNameRoute: typeof AppMasterNameRoute
@@ -247,6 +267,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppMyScriptsRoute: AppMyScriptsRoute,
+  AppReportsRoute: AppReportsRoute,
   AppResultsRoute: AppResultsRoute,
   AppEvaluateScriptIdRoute: AppEvaluateScriptIdRouteWithChildren,
   AppMasterNameRoute: AppMasterNameRoute,
