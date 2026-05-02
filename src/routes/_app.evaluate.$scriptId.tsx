@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Pen, Check, X, HelpCircle,
-  Undo2, Info, AlertTriangle, ShieldCheck,
+  Undo2, Info, AlertTriangle, ShieldCheck, UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -225,18 +225,37 @@ function Evaluate() {
       )}
 
       {/* Top bar */}
-      <Card className="p-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-        <span><span className="text-muted-foreground">Subject:</span> <strong>{script.subjectName}</strong></span>
-        <span><span className="text-muted-foreground">Start:</span> {new Date(script.startedAt!).toLocaleString()}</span>
-        <span><span className="text-muted-foreground">Time:</span> <strong>{fmtTime(elapsed)}</strong></span>
-        <span><span className="text-muted-foreground">Pages:</span> {script.totalPages}</span>
-        <div className="ml-auto flex gap-2">
+      <Card className="p-3.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm border-l-4 border-l-primary">
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground uppercase tracking-wider text-[10px] font-medium">Subject Name:</span>
+          <strong className="text-foreground">{script.subjectName}</strong>
+        </div>
+        <span className="hidden md:inline h-4 w-px bg-border" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground uppercase tracking-wider text-[10px] font-medium">Start Time:</span>
+          <strong className="text-foreground tabular-nums">
+            {new Date(script.startedAt!).toLocaleString(undefined, {
+              day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+            })}
+          </strong>
+        </div>
+        <span className="hidden md:inline h-4 w-px bg-border" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground uppercase tracking-wider text-[10px] font-medium">Time Taken:</span>
+          <strong className="text-primary tabular-nums">{fmtTime(elapsed)}</strong>
+        </div>
+        <span className="hidden md:inline h-4 w-px bg-border" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground uppercase tracking-wider text-[10px] font-medium">Total Pages:</span>
+          <strong className="text-foreground tabular-nums">{script.totalPages}</strong>
+        </div>
+        <div className="ml-auto flex gap-1.5">
           <Button size="sm" variant="outline" onClick={() => setShowRules(true)}>
             <Info className="h-4 w-4 mr-1" /> Rules
           </Button>
-          <Button size="sm" variant="secondary">Question Paper</Button>
-          <Button size="sm" variant="secondary">Answer Key</Button>
-          <Button size="sm" onClick={onSave}>Save</Button>
+          <Button size="sm" className="bg-sky-600 hover:bg-sky-700 text-white">Question Paper</Button>
+          <Button size="sm" className="bg-sky-600 hover:bg-sky-700 text-white">Answer Key</Button>
+          <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white" onClick={onSave}>Save</Button>
         </div>
       </Card>
 
@@ -269,7 +288,7 @@ function Evaluate() {
               <Button size="icon" variant="ghost" disabled={page >= script.totalPages} onClick={() => setPage(page + 1)}><ChevronRight className="h-4 w-4" /></Button>
             </span>
           </div>
-          <div className="flex-1 overflow-auto bg-muted/40 rounded p-4 flex items-start justify-center">
+          <div className="relative flex-1 overflow-auto bg-muted/40 rounded p-4 flex items-start justify-center">
             <div className="relative" style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}>
               <img src={script.pageImages[page - 1]} alt={`Page ${page}`} className="block max-w-[640px] shadow-md" />
               <canvas
@@ -283,14 +302,61 @@ function Evaluate() {
                 onMouseLeave={onCanvasMouseUp}
               />
             </div>
+
+            {/* Faculty proctoring overlay */}
+            <div className="absolute bottom-4 left-4 bg-card/95 backdrop-blur shadow-xl rounded-lg p-2.5 border w-[180px] hidden md:block">
+              <div className="flex items-center gap-2.5">
+                <div className="relative h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500/40 to-emerald-700/40 ring-2 ring-emerald-500/30 flex items-center justify-center">
+                  <UserCircle className="h-8 w-8 text-emerald-700 dark:text-emerald-400" />
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" aria-label="Camera active" />
+                </div>
+                <div className="flex-1 text-[10px] leading-tight">
+                  <div className="font-semibold truncate">Faculty Cam</div>
+                  <div className="text-muted-foreground">Live proctor</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1 mt-2 text-[10px]">
+                <div className="rounded px-1.5 py-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium">
+                  Alert: <strong className="tabular-nums">4 / 5</strong>
+                </div>
+                <div className="rounded px-1.5 py-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-medium">
+                  Warning: <strong className="tabular-nums">0 / 5</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Page navigation FAB */}
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 hidden lg:flex items-center gap-1 bg-card/95 backdrop-blur shadow-md rounded-full border px-1 py-1">
+              <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs tabular-nums px-1.5">
+                {page} / {script.totalPages}
+              </span>
+              <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full" disabled={page >= script.totalPages} onClick={() => setPage(page + 1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </Card>
 
         {/* Right: marking pane */}
         <Card className="p-3 flex flex-col">
-          <div className="flex items-center justify-between text-sm bg-muted px-3 py-2 rounded">
-            <span>Marks: <strong>{totals.obtained} / {totals.max}</strong></span>
-            <span>Questions: <strong>{totals.answered} / {script.questions.length}</strong></span>
+          <div className="flex items-center justify-between text-sm bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 px-3 py-2.5 rounded-md">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Marks</div>
+              <div className="font-bold tabular-nums text-base">
+                <span className="text-primary">{totals.obtained}</span>
+                <span className="text-muted-foreground"> / {totals.max}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Questions</div>
+              <div className="font-bold tabular-nums text-base">
+                <span className="text-primary">{totals.answered}</span>
+                <span className="text-muted-foreground"> / {script.questions.length}</span>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mt-3">
@@ -378,27 +444,48 @@ function Evaluate() {
 
           <div className="flex gap-2 mt-3">
             <Button
-              className="flex-1"
+              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
               disabled={!!submitError}
               onClick={() => setConfirmSubmit(true)}
             >
               Submit
             </Button>
-            <Button className="flex-1" variant="destructive" onClick={() => setConfirmReject(true)}>Reject</Button>
+            <Button
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+              onClick={() => setConfirmReject(true)}
+            >
+              Reject
+            </Button>
           </div>
 
           {activeQ && (
-            <Card className="p-3 mt-3 text-xs bg-muted/30">
+            <Card className="p-3 mt-3 text-xs bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-900/40">
               <div className="flex items-start justify-between gap-2">
-                <p>{script.questions.find((q) => q.id === activeQ)?.text}</p>
-                <button className="text-muted-foreground" onClick={() => setActiveQ(null)}>✕</button>
+                <p className="leading-relaxed">
+                  <span className="font-semibold text-amber-700 dark:text-amber-400">{activeQ}: </span>
+                  {script.questions.find((q) => q.id === activeQ)?.text}
+                </p>
+                <button
+                  className="text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={() => setActiveQ(null)}
+                  aria-label="Close question"
+                >
+                  ✕
+                </button>
               </div>
-              <button className="text-primary text-xs mt-1">view…</button>
+              <button className="text-primary text-xs mt-1 underline-offset-2 hover:underline">
+                view full question…
+              </button>
             </Card>
           )}
 
           <div className="mt-3 flex items-center gap-2">
-            <Input placeholder="Enter page number" type="number" min={1} max={script.totalPages}
+            <Input
+              placeholder="Enter page number"
+              type="number"
+              min={1}
+              max={script.totalPages}
+              className="h-9"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   const n = Number((e.target as HTMLInputElement).value);
@@ -406,7 +493,28 @@ function Evaluate() {
                 }
               }}
             />
-            <Button variant="secondary" size="sm">Go</Button>
+            <Button variant="secondary" size="sm" className="h-9">Go</Button>
+          </div>
+
+          {/* Brush color */}
+          <div className="mt-3 flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Brush:</span>
+            <div className="flex gap-1.5">
+              {[
+                { c: "#1d4ed8", name: "Blue" },
+                { c: "#dc2626", name: "Red" },
+                { c: "#16a34a", name: "Green" },
+                { c: "#ca8a04", name: "Yellow" },
+              ].map((b) => (
+                <button
+                  key={b.c}
+                  className="h-5 w-5 rounded-full border-2 border-border hover:border-foreground transition-colors"
+                  style={{ background: b.c }}
+                  title={b.name}
+                  aria-label={`Brush ${b.name}`}
+                />
+              ))}
+            </div>
           </div>
         </Card>
       </div>
