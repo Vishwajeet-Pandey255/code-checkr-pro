@@ -29,7 +29,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     { title: "Exam Cycle", url: "/master/exam-cycle", icon: CalendarRange, roles: ["admin"] },
     { title: "Question Paper", url: "/master/question-paper", icon: FileQuestion, roles: ["admin"] },
     { title: "Faculty", url: "/master/faculty", icon: Users, roles: ["admin"] },
-    { title: "Users", url: "/master/users", icon: Users, roles: ["admin"] },
+    { title: "Users & Roles", url: "/admin/users", icon: Users, roles: ["admin"] },
   ]},
   { label: "OSM", items: [
     { title: "Evaluation Type", url: "/master/evaluation-type", icon: FileCheck2, roles: ["admin", "manager"] },
