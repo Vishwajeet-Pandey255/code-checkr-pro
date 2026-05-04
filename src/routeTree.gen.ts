@@ -20,6 +20,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppOsmAllocationRouteImport } from './routes/_app.osm.allocation'
 import { Route as AppMasterNameRouteImport } from './routes/_app.master.$name'
 import { Route as AppEvaluateScriptIdRouteImport } from './routes/_app.evaluate.$scriptId'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppEvaluateScriptIdSummaryRouteImport } from './routes/_app.evaluate.$scriptId.summary'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -76,6 +77,11 @@ const AppEvaluateScriptIdRoute = AppEvaluateScriptIdRouteImport.update({
   path: '/evaluate/$scriptId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEvaluateScriptIdSummaryRoute =
   AppEvaluateScriptIdSummaryRouteImport.update({
     id: '/summary',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/my-scripts': typeof AppMyScriptsRoute
   '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/master/$name': typeof AppMasterNameRoute
   '/osm/allocation': typeof AppOsmAllocationRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/my-scripts': typeof AppMyScriptsRoute
   '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/master/$name': typeof AppMasterNameRoute
   '/osm/allocation': typeof AppOsmAllocationRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/_app/my-scripts': typeof AppMyScriptsRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/results': typeof AppResultsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/_app/master/$name': typeof AppMasterNameRoute
   '/_app/osm/allocation': typeof AppOsmAllocationRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/my-scripts'
     | '/reports'
     | '/results'
+    | '/admin/users'
     | '/evaluate/$scriptId'
     | '/master/$name'
     | '/osm/allocation'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/my-scripts'
     | '/reports'
     | '/results'
+    | '/admin/users'
     | '/evaluate/$scriptId'
     | '/master/$name'
     | '/osm/allocation'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/_app/my-scripts'
     | '/_app/reports'
     | '/_app/results'
+    | '/_app/admin/users'
     | '/_app/evaluate/$scriptId'
     | '/_app/master/$name'
     | '/_app/osm/allocation'
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEvaluateScriptIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/evaluate/$scriptId/summary': {
       id: '/_app/evaluate/$scriptId/summary'
       path: '/summary'
@@ -279,6 +298,7 @@ interface AppRouteChildren {
   AppMyScriptsRoute: typeof AppMyScriptsRoute
   AppReportsRoute: typeof AppReportsRoute
   AppResultsRoute: typeof AppResultsRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
   AppEvaluateScriptIdRoute: typeof AppEvaluateScriptIdRouteWithChildren
   AppMasterNameRoute: typeof AppMasterNameRoute
   AppOsmAllocationRoute: typeof AppOsmAllocationRoute
@@ -289,6 +309,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMyScriptsRoute: AppMyScriptsRoute,
   AppReportsRoute: AppReportsRoute,
   AppResultsRoute: AppResultsRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
   AppEvaluateScriptIdRoute: AppEvaluateScriptIdRouteWithChildren,
   AppMasterNameRoute: AppMasterNameRoute,
   AppOsmAllocationRoute: AppOsmAllocationRoute,
@@ -305,3 +326,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
