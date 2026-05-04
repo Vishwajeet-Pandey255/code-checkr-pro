@@ -1,110 +1,124 @@
-# Copy Checking (OSM) — Frontend UI Clone
 
-A pixel-and-flow clone of the IntelliExams Online Script Marking system, built as a React frontend only. All data comes from a mock API layer (`src/lib/api/`) that returns Promises — you swap each function's body to call your PHP/CodeIgniter endpoints later, without touching components.
+# Plan: Make OSM Copy Checking App Fully Dynamic with Lovable Cloud
 
-## Roles & Login
+Goal: replace every mock in `src/lib/api/*.ts` with real Postgres queries, real Supabase auth, real file storage, and real role-based access — all hosted on Lovable Cloud. No more hardcoded data.
 
-Mock login screen with role switcher (Admin, Regional Manager, Faculty, Student). Selected role is stored in `localStorage` and drives sidebar visibility and route guards. Each role lands on its own home:
+---
 
-- **Admin** → Dashboard + all modules
-- **Regional Manager** → Dashboard + Allocation + Reports
-- **Faculty** → "My Allocated Scripts" → Evaluation screen
-- **Student** → "My Results" (read-only score sheet)
+## 1. Enable Lovable Cloud
 
-Note: this is UI-level gating only. Real auth must be enforced by your PHP backend.
+Turn on Lovable Cloud for this project. This provisions:
+- Postgres database
+- Supabase Auth (email/password + Google sign-in)
+- Storage buckets
+- Server functions runtime (already on TanStack Start)
 
-## App Shell
+---
 
-- Collapsible left sidebar (shadcn) matching the IntelliExams module list: Degree, Branch, Program, Batch, Subject, College, Exam, QPDS, Question Paper, Faculty, OSM Reports → (DashboardCharts, Reports, Reports Authorization), OSM → (Evaluation Type, Data Movement, Publish, Centralized Answer Script Allocation, Centralized Deallocation, Null/Void Answer Scripts, Rechecking), Configuration Management, Users.
-- Top header with breadcrumbs, language toggle (EN), dark-mode toggle, fullscreen, profile avatar.
-- All non-essential modules render a clean "Module" placeholder page so the sidebar feels complete.
+## 2. Database schema (Postgres migrations)
 
-## Screens (built in detail)
+### Auth & roles
+- `profiles` — `id (uuid, FK auth.users)`, `full_name`, `email`, `college_code`, `phone`, `created_at`
+- `app_role` enum — `admin | manager | faculty | student`
+- `user_roles` — `id`, `user_id`, `role` (separate table — required for security, never on profiles)
+- `has_role(user_id, role)` SECURITY DEFINER function (prevents recursive RLS)
 
-### 1. Dashboard Charts (`/dashboard`)
-- Filter row: Program / Branch dropdowns
-- "Over All Evaluation Details" data table (Evaluated, Partially, Pending, Allocated, Rejected)
-- Donut chart: Pending / Allocated / Partially Evaluated / Evaluated / Rejected scripts (recharts)
-- "Date Wise Evaluation Details" bar chart
-- "Time Wise Evaluation Details" area chart
+### Master data (12 modules — single normalized design)
+- `degrees`, `branches`, `semesters`, `subjects`, `colleges`, `regions`, `exam_sessions`, `question_papers`, `marking_schemes`, `faculty_profiles`, `students`, `evaluation_rules`
+  - Each: `id`, name fields, FKs, `is_active`, `created_at/updated_at`
 
-### 2. Centralized Answer Script Allocation (`/osm/allocation`)
-- Cascading filters: Exam Cycle → Exam Series → Subject → Evaluation Type
-- Summary stat cards: Total / Allocated / Evaluated / Partial / Rejected / Pending
-- Faculty table with checkbox selection (Faculty, College Code, College Name, Type, Experience, Evaluated/Allocated/Partial/Rejected/Pending counts)
-- Action bar: Apply Dynamic Allocation, Allocate, Close
-- Bulk-upload + auto-allocate dialog: drag-drop ZIP/PDF, pick distribution rule (round-robin / by experience / equal), preview, confirm
+### Question structure
+- `questions` — `id`, `paper_id`, `q_no`, `parent_id` (nullable, for sub-questions), `max_marks`, `text`
 
-### 3. Faculty Evaluation Screen (`/evaluate/$scriptId`) — the core screen
-Layout matches your screenshot:
-- Top bar: Subject, Start Time, Time Taken (live timer), Total Pages, buttons Question Paper / Answer Key / Save
-- **Left pane (~70%)**: scanned page viewer with zoom, pan, page number jump, prev/next, brush color picker
-- Annotation toolbar: zoom, tick (✓), cross (✗), pen, doubt (?), undo — drawn on a canvas overlay
-- **Right pane (~30%)**:
-  - Marks header (Marks: x / 60, Questions: n / 15)
-  - Question grid (Q1A, Q1B, Q2A… Q9B) with editable score boxes "/max", NA / NR toggles
-  - Submit / Reject buttons
-  - Question text preview ("(a) Explain why data independence…") with "view…"
-  - "Enter page number" jump
-- Submit confirmation modal → navigates to score-tree summary
+### Answer scripts & allocation
+- `answer_scripts` — `id`, `script_code`, `student_id`, `paper_id`, `subject_id`, `pdf_url`, `status (pending|in_progress|evaluated|rejected|submitted)`, `assigned_to (faculty user_id)`, `assigned_at`, `submitted_at`
+- `script_scores` — `id`, `script_id`, `question_id`, `marks`, `is_na`, `is_nr`, `remarks`, `evaluated_by`, `updated_at`
+- `script_rejections` — `id`, `script_id`, `reason`, `rejected_by`, `created_at`
+- `evaluation_audit` — `id`, `script_id`, `actor_id`, `action`, `payload jsonb`, `created_at`
 
-### 4. Evaluation Summary / Score Tree (`/evaluate/$scriptId/summary`)
-Tree view exactly like screenshot 1:
-```
-─ Section A
-  ├ Q3 : 3 / 6 ✓
-  ├ Q4 : 3 / 6 ✓
-  ├ Q5 : 2 / 6 ✗
-  ├ Q1A
-  │  ├ Q1A : 2 / 3 ✓
-  │  └ Q1B : 2.5 / 3 ✓
-  └ Q2B …
-─ Section B …
-─ Section C …
-```
-Side card with Max Marks vs Obtained Marks, "Continue Evaluation" CTA.
+### RLS policies (per table)
+- Admin: full access via `has_role('admin')`
+- Manager: read all, write within region
+- Faculty: read/write only scripts where `assigned_to = auth.uid()`
+- Student: read-only own results
 
-### 5. Faculty — My Allocated Scripts (`/my-scripts`)
-Table of scripts assigned to logged-in faculty with status chips, "Start" / "Resume" / "View" actions.
+---
 
-### 6. Master Data Modules (CRUD pattern, one shared template)
-Built for: Degree, Branch, Program, Batch, Subject, College, Faculty, Users, Exam Cycle, Exam Series, Question Paper, Evaluation Type.
-Each module = list page (search, filters, pagination, add/edit/delete dialogs, CSV export button). Forms use react-hook-form + zod.
+## 3. Storage buckets
 
-### 7. OSM Reports (`/reports`)
-- Report selector (Evaluation Summary, Faculty-wise, College-wise, Date range)
-- Filter form, results table, Export to CSV/PDF buttons (CSV works client-side; PDF stub)
+- `answer-scripts` (private) — uploaded PDFs
+- `bulk-uploads` (private) — CSV files for bulk script ingest
+- `avatars` (public) — profile pictures
 
-### 8. Student Results (`/results`)
-Read-only version of the score tree for the logged-in student.
+RLS policies: faculty can read only PDFs of scripts assigned to them; admin/manager full access.
 
-## Mock data & API layer
+---
 
-`src/lib/api/` holds one file per resource (`scripts.ts`, `faculty.ts`, `allocation.ts`, `dashboard.ts`, `masters.ts`, `auth.ts`). Each exports async functions returning typed mock data with realistic delay. Your PHP migration = replace function bodies with `fetch('/api/...')` calls. Types live in `src/types/`.
+## 4. Auth wiring
 
-A README in `src/lib/api/README.md` will document the exact endpoint shape each function expects so your CodeIgniter controllers can match it 1:1.
+- Replace mock `src/lib/api/auth.ts` + `auth-context.tsx` with Supabase auth
+- `/login` page: email + password + Google sign-in
+- Sign-up trigger creates `profiles` row + default `student` role; admins promote roles from a Users admin page
+- `/reset-password` page (required by Lovable auth rules)
+- Convert `RoleGate` + route guards to use `_authenticated` layout pattern with `beforeLoad` + role check via `has_role` (server function)
 
-## Tech notes (for your developer)
+---
 
-- TanStack Start (React 19 + TypeScript), file-based routes under `src/routes/`
-- shadcn/ui + Tailwind v4 (already set up)
-- recharts for all charts
-- react-hook-form + zod for forms
-- Canvas overlay for annotation tools (HTML5 canvas, exports JSON of strokes per page)
-- All API calls isolated in `src/lib/api/` for easy backend swap
-- No database, no server functions used — pure SPA-style frontend
-- Color theme tuned to IntelliExams (white surfaces, slate text, teal/green accents)
+## 5. Server functions (`src/server/*.functions.ts`)
 
-## Out of scope (this build)
+Replace each mock module 1:1:
 
-- Real authentication (mock only — your PHP handles it)
-- Real file storage for scanned PDFs (uses sample images)
-- Live PHP integration (you'll wire endpoints after export)
-- Email notifications, audit logs, rechecking workflow details
+| File | Functions |
+|---|---|
+| `dashboard.functions.ts` | `getDashboardStats`, `getDateWiseEvaluation`, `getTimeWiseEvaluation` (real aggregates) |
+| `masters.functions.ts` | `listMaster(name)`, `upsertMaster`, `deleteMaster` (admin-only) |
+| `scripts.functions.ts` | `listMyScripts`, `getScript`, `saveScores` (autosave), `submitScript` (with validation), `rejectScript` |
+| `allocation.functions.ts` | `listAllocationFaculty`, `allocateScripts` (round-robin / load-balanced), `bulkUploadScripts` (parses CSV from storage) |
+| `reports.functions.ts` | `getFacultyProgress`, `exportReportCSV` |
+| `students.functions.ts` | `getStudentResults` |
 
-## Deliverables
+All server functions:
+- Use `requireSupabaseAuth` middleware
+- Validate input with Zod
+- Enforce role checks via `has_role()`
+- Return typed shapes matching existing TS types in `src/types/index.ts` (so UI keeps working)
 
-1. Full React UI matching the screenshots
-2. Mock API layer with documented endpoint contracts
-3. README with: route map, role matrix, and exact JSON shapes your CodeIgniter API must return
-4. Export the project from Lovable → drop into your PHP project's `public/` folder, point CodeIgniter API routes at `/api/*`, done.
+---
+
+## 6. UI changes (minimal — keep current screens)
+
+- Swap every `import { ... } from "@/lib/api/..."` to call the new server functions via `useServerFn` / route loaders
+- Add `_authenticated` layout route + role-gated sublayouts (`_authenticated/_admin`, `_authenticated/_faculty`)
+- Bulk upload page: upload CSV → storage → call server fn to ingest + auto-allocate
+- Evaluation page: keep all existing rules (NA/NR, 0.5 increments, mandatory rules dialog, autosave) but persist to DB
+- Add a small **Users & Roles** admin page (assign roles to signed-up users)
+
+---
+
+## 7. What you (the user) need to do
+
+1. Approve this plan → I enable Lovable Cloud
+2. After cloud is up, the app will require sign-up. First user → I'll mark you as `admin` so you can create masters, faculty, students, etc.
+3. (Optional) If you want Google sign-in, no extra setup needed — it works out of the box on Lovable Cloud.
+
+---
+
+## 8. Out of scope (not doing)
+
+- PHP / CodeIgniter / MySQL (platform doesn't support them)
+- Migrating data from any existing system (no source data provided)
+- SMS/email notifications (can be added later)
+
+---
+
+## Delivery order
+
+1. Enable Cloud + schema migrations + RLS + roles function
+2. Auth (login, signup, reset, role assignment, guards)
+3. Masters CRUD wired to DB
+4. Students + answer scripts + storage + bulk upload + allocation
+5. Faculty evaluation persistence (scores, autosave, submit, reject)
+6. Dashboard + reports real aggregates
+7. Smoke test each role end-to-end
+
+After approval I switch to build mode and execute step by step.
