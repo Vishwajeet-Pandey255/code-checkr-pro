@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,8 +20,14 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppOsmAllocationRouteImport } from './routes/_app.osm.allocation'
 import { Route as AppMasterNameRouteImport } from './routes/_app.master.$name'
 import { Route as AppEvaluateScriptIdRouteImport } from './routes/_app.evaluate.$scriptId'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppEvaluateScriptIdSummaryRouteImport } from './routes/_app.evaluate.$scriptId.summary'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -70,6 +77,11 @@ const AppEvaluateScriptIdRoute = AppEvaluateScriptIdRouteImport.update({
   path: '/evaluate/$scriptId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEvaluateScriptIdSummaryRoute =
   AppEvaluateScriptIdSummaryRouteImport.update({
     id: '/summary',
@@ -80,10 +92,12 @@ const AppEvaluateScriptIdSummaryRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AppDashboardRoute
   '/my-scripts': typeof AppMyScriptsRoute
   '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/master/$name': typeof AppMasterNameRoute
   '/osm/allocation': typeof AppOsmAllocationRoute
@@ -92,10 +106,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AppDashboardRoute
   '/my-scripts': typeof AppMyScriptsRoute
   '/reports': typeof AppReportsRoute
   '/results': typeof AppResultsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/master/$name': typeof AppMasterNameRoute
   '/osm/allocation': typeof AppOsmAllocationRoute
@@ -106,10 +122,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/my-scripts': typeof AppMyScriptsRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/results': typeof AppResultsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/evaluate/$scriptId': typeof AppEvaluateScriptIdRouteWithChildren
   '/_app/master/$name': typeof AppMasterNameRoute
   '/_app/osm/allocation': typeof AppOsmAllocationRoute
@@ -120,10 +138,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/reset-password'
     | '/dashboard'
     | '/my-scripts'
     | '/reports'
     | '/results'
+    | '/admin/users'
     | '/evaluate/$scriptId'
     | '/master/$name'
     | '/osm/allocation'
@@ -132,10 +152,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/reset-password'
     | '/dashboard'
     | '/my-scripts'
     | '/reports'
     | '/results'
+    | '/admin/users'
     | '/evaluate/$scriptId'
     | '/master/$name'
     | '/osm/allocation'
@@ -145,10 +167,12 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/login'
+    | '/reset-password'
     | '/_app/dashboard'
     | '/_app/my-scripts'
     | '/_app/reports'
     | '/_app/results'
+    | '/_app/admin/users'
     | '/_app/evaluate/$scriptId'
     | '/_app/master/$name'
     | '/_app/osm/allocation'
@@ -159,10 +183,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -233,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEvaluateScriptIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/evaluate/$scriptId/summary': {
       id: '/_app/evaluate/$scriptId/summary'
       path: '/summary'
@@ -259,6 +298,7 @@ interface AppRouteChildren {
   AppMyScriptsRoute: typeof AppMyScriptsRoute
   AppReportsRoute: typeof AppReportsRoute
   AppResultsRoute: typeof AppResultsRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
   AppEvaluateScriptIdRoute: typeof AppEvaluateScriptIdRouteWithChildren
   AppMasterNameRoute: typeof AppMasterNameRoute
   AppOsmAllocationRoute: typeof AppOsmAllocationRoute
@@ -269,6 +309,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMyScriptsRoute: AppMyScriptsRoute,
   AppReportsRoute: AppReportsRoute,
   AppResultsRoute: AppResultsRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
   AppEvaluateScriptIdRoute: AppEvaluateScriptIdRouteWithChildren,
   AppMasterNameRoute: AppMasterNameRoute,
   AppOsmAllocationRoute: AppOsmAllocationRoute,
@@ -280,16 +321,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
