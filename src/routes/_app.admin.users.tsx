@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Role } from "@/types";
+import { seedDemoData } from "@/lib/api/seed";
 
 export const Route = createFileRoute("/_app/admin/users")({
   component: () => (
@@ -80,7 +81,26 @@ function UsersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Users &amp; Roles</h1>
-        <Button variant="outline" onClick={load} disabled={busy}>Refresh</Button>
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await seedDemoData();
+                toast.success(`Demo data ready: ${r.summary}`);
+              } catch (e) {
+                toast.error((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Seed demo data
+          </Button>
+          <Button variant="outline" onClick={load} disabled={busy}>Refresh</Button>
+        </div>
       </div>
       <Card className="p-0 overflow-hidden">
         <Table>

@@ -468,6 +468,7 @@ export type Database = {
           paper_id: string
           parent_id: string | null
           q_no: string
+          section: string
           sort_order: number
           text: string | null
         }
@@ -478,6 +479,7 @@ export type Database = {
           paper_id: string
           parent_id?: string | null
           q_no: string
+          section?: string
           sort_order?: number
           text?: string | null
         }
@@ -488,6 +490,7 @@ export type Database = {
           paper_id?: string
           parent_id?: string | null
           q_no?: string
+          section?: string
           sort_order?: number
           text?: string | null
         }
@@ -803,6 +806,7 @@ export type Database = {
         | "evaluated"
         | "submitted"
         | "rejected"
+        | "allocated"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -937,6 +941,7 @@ export const Constants = {
         "evaluated",
         "submitted",
         "rejected",
+        "allocated",
       ],
     },
   },

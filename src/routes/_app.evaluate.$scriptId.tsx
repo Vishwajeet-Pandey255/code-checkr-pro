@@ -196,7 +196,7 @@ function Evaluate() {
       toast.error("Please provide a rejection reason (min 10 characters).");
       return;
     }
-    await rejectScript(scriptId);
+    await rejectScript(scriptId, rejectReason);
     toast.warning(`Script rejected · ${rejectReason}`);
     navigate({ to: "/my-scripts" });
   };

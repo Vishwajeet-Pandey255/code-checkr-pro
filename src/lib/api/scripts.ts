@@ -1,103 +1,207 @@
-import type { AnswerScript, QuestionDef, QuestionScore } from "@/types";
-import { delay } from "./_mock";
+import type { AnswerScript, QuestionDef, QuestionScore, ScriptStatus } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
-const PAGE_SVG = (n: number) =>
+const PLACEHOLDER_PAGE = (n: number) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 1100'>
       <rect width='800' height='1100' fill='#fdfcf6'/>
-      <text x='40' y='60' font-family='Georgia' font-size='28' fill='#1a1a1a'>Page ${n}</text>
-      <g font-family='Comic Sans MS, cursive' font-size='34' fill='#1a3b8c'>
-        <text x='60' y='140'>internal level without</text>
-        <text x='60' y='200'>effecting the logical or</text>
-        <text x='60' y='260'>conceptual level.</text>
-        <text x='60' y='340'>Logical data independence is harder to</text>
-        <text x='60' y='400'>achieve. In a DBMS environment data is stored</text>
-        <text x='60' y='460'>in form of tables, each table is related</text>
-        <text x='60' y='520'>to another table in a database, it is</text>
-        <text x='60' y='580'>more clean and structured, so finding</text>
-        <text x='60' y='640'>data in particular entity is not hard.</text>
-      </g>
-      <path d='M 60 380 Q 350 420 640 360' stroke='#1f4ed8' stroke-width='3' fill='none'/>
+      <text x='40' y='60' font-family='Georgia' font-size='24' fill='#1a1a1a'>Page ${n}</text>
+      <text x='40' y='560' font-family='Arial' font-size='18' fill='#888'>(scanned answer page placeholder)</text>
     </svg>`
   )}`;
 
-const QUESTIONS: QuestionDef[] = [
-  { id: "Q1A", parent: "Q1", section: "A", maxMarks: 3, text: "(a) Explain why data independence is important in DBMS with suitable example." },
-  { id: "Q1B", parent: "Q1", section: "A", maxMarks: 3, text: "(b) Differentiate logical vs physical data independence." },
-  { id: "Q2A", parent: "Q2", section: "A", maxMarks: 2, text: "(a) Define entity and attribute." },
-  { id: "Q2B", parent: "Q2", section: "A", maxMarks: 2, text: "(b) Give an example of weak entity." },
-  { id: "Q2C", parent: "Q2", section: "A", maxMarks: 2, text: "(c) ER diagram for library." },
-  { id: "Q3",  section: "A", maxMarks: 6, text: "Explain normalization with examples up to 3NF." },
-  { id: "Q4",  section: "A", maxMarks: 6, text: "Difference between DBMS and RDBMS." },
-  { id: "Q5",  section: "A", maxMarks: 6, text: "Write SQL for joins with examples." },
-  { id: "Q6A", parent: "Q6", section: "B", maxMarks: 3, text: "(a) ACID properties." },
-  { id: "Q6B", parent: "Q6", section: "B", maxMarks: 7, text: "(b) Concurrency control techniques." },
-  { id: "Q7",  section: "B", maxMarks: 10, text: "Indexing in databases — types and use cases." },
-  { id: "Q8A", parent: "Q8", section: "B", maxMarks: 5, text: "(a) Lossless decomposition." },
-  { id: "Q8B", parent: "Q8", section: "B", maxMarks: 5, text: "(b) BCNF with example." },
-  { id: "Q9A", parent: "Q9", section: "C", maxMarks: 6, text: "(a) Distributed databases." },
-  { id: "Q9B", parent: "Q9", section: "C", maxMarks: 10, text: "(b) NoSQL databases — types, when to use." },
-];
+function mapStatus(s: string): ScriptStatus {
+  if (s === "submitted") return "evaluated";
+  if (s === "in_progress") return "in_progress";
+  if (s === "allocated") return "allocated";
+  if (s === "rejected") return "rejected";
+  if (s === "pending") return "pending";
+  return "pending";
+}
 
-function makeScript(id: string, status: AnswerScript["status"], filled = false): AnswerScript {
-  const seed = id.charCodeAt(0) % 5;
-  const scores: QuestionScore[] = QUESTIONS.map((q, i) => ({
-    id: q.id,
-    marks: filled ? Math.round(q.maxMarks * (0.5 + ((seed + i) % 4) / 10) * 2) / 2 : null,
+export async function getScript(id: string): Promise<AnswerScript> {
+  const { data: script, error } = await supabase
+    .from("answer_scripts")
+    .select("id, script_code, status, assigned_at, paper_id, pdf_url, student_id, subject_id, question_papers(name, code, total_marks), subjects(name, code)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!script) throw new Error("Script not found");
+  if (!script.paper_id) throw new Error("Script has no paper assigned");
+
+  const { data: questions } = await supabase
+    .from("questions")
+    .select("id, q_no, parent_id, max_marks, text, section, sort_order")
+    .eq("paper_id", script.paper_id)
+    .order("sort_order");
+
+  const qs = (questions ?? []) as Array<{
+    id: string; q_no: string; parent_id: string | null; max_marks: number; text: string | null; section: string;
+  }>;
+  const idToQNo = new Map(qs.map((q) => [q.id, q.q_no]));
+
+  const questionDefs: QuestionDef[] = qs.map((q) => ({
+    id: q.q_no,
+    parent: q.parent_id ? idToQNo.get(q.parent_id) : undefined,
+    section: (["A", "B", "C"].includes(q.section) ? q.section : "A") as "A" | "B" | "C",
+    maxMarks: Number(q.max_marks),
+    text: q.text ?? "",
   }));
+
+  const { data: scoresRows } = await supabase
+    .from("script_scores")
+    .select("question_id, marks, is_na, is_nr")
+    .eq("script_id", id);
+
+  const qNoByQuestionId = new Map(qs.map((q) => [q.id, q.q_no]));
+  const scoresByQ = new Map<string, { marks: number | null; na?: boolean; nr?: boolean }>();
+  for (const r of scoresRows ?? []) {
+    const qno = qNoByQuestionId.get(r.question_id);
+    if (qno) scoresByQ.set(qno, { marks: r.marks === null ? null : Number(r.marks), na: r.is_na, nr: r.is_nr });
+  }
+  const scores: QuestionScore[] = questionDefs.map((q) =>
+    scoresByQ.get(q.id) ? { id: q.id, ...scoresByQ.get(q.id)! } : { id: q.id, marks: null }
+  );
+
+  const totalPages = 6;
+  const paper = (script as unknown as { question_papers: { name: string; code: string; total_marks: number } | null }).question_papers;
+  const subj = (script as unknown as { subjects: { name: string; code: string } | null }).subjects;
+
   return {
-    id,
-    studentId: `s-${id}`,
+    id: script.id,
+    studentId: script.student_id ?? "",
     studentName: "Anonymous Candidate",
-    subjectCode: "DBMS",
-    subjectName: "DBMS - Database Management Systems",
-    examCycle: "Fall2025",
-    examSeries: "B.COM_05",
-    totalPages: 40,
-    pageImages: Array.from({ length: 40 }, (_, i) => PAGE_SVG(i + 1)),
-    status,
-    startedAt: new Date().toISOString(),
-    questions: QUESTIONS,
+    subjectCode: subj?.code ?? "",
+    subjectName: subj?.name ?? paper?.name ?? "Subject",
+    examCycle: "",
+    examSeries: script.script_code,
+    totalPages,
+    pageImages: Array.from({ length: totalPages }, (_, i) => PLACEHOLDER_PAGE(i + 1)),
+    status: mapStatus(script.status),
+    startedAt: script.assigned_at ?? new Date().toISOString(),
+    questions: questionDefs,
     scores,
-    maxMarks: QUESTIONS.reduce((s, q) => s + q.maxMarks, 0),
+    maxMarks: questionDefs.reduce((s, q) => s + q.maxMarks, 0) || Number(paper?.total_marks ?? 0),
   };
 }
 
-const SCRIPTS: AnswerScript[] = [
-  makeScript("387", "in_progress"),
-  makeScript("388", "allocated"),
-  makeScript("389", "allocated"),
-  makeScript("390", "evaluated", true),
-  makeScript("391", "rejected"),
-];
-
-export async function getScript(id: string): Promise<AnswerScript> {
-  const s = SCRIPTS.find((x) => x.id === id) ?? makeScript(id, "allocated");
-  return delay({ ...s }, 200);
-}
-
 export async function listMyScripts(): Promise<AnswerScript[]> {
-  return delay(SCRIPTS);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("answer_scripts")
+    .select("id, script_code, status, assigned_at, question_papers(name), subjects(name, code)")
+    .eq("assigned_to", user.id)
+    .order("assigned_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((s) => {
+    const subj = (s as unknown as { subjects: { name: string; code: string } | null }).subjects;
+    const paper = (s as unknown as { question_papers: { name: string } | null }).question_papers;
+    return {
+      id: s.id,
+      studentId: "",
+      studentName: "Anonymous",
+      subjectCode: subj?.code ?? "",
+      subjectName: subj?.name ?? paper?.name ?? "Subject",
+      examCycle: "",
+      examSeries: s.script_code,
+      totalPages: 6,
+      pageImages: [],
+      status: mapStatus(s.status),
+      startedAt: s.assigned_at ?? undefined,
+      questions: [],
+      scores: [],
+      maxMarks: 0,
+    };
+  });
 }
 
-export async function saveScores(id: string, scores: QuestionScore[]) {
-  const s = SCRIPTS.find((x) => x.id === id);
-  if (s) s.scores = scores;
-  return delay({ ok: true });
+export async function saveScores(scriptId: string, scores: QuestionScore[]) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // Need question UUIDs by q_no. Get paper_id then questions.
+  const { data: script } = await supabase.from("answer_scripts").select("paper_id, status").eq("id", scriptId).single();
+  if (!script || !script.paper_id) throw new Error("Script missing or has no paper");
+  const { data: qs } = await supabase.from("questions").select("id, q_no").eq("paper_id", script.paper_id);
+  const idByQNo = new Map((qs ?? []).map((q) => [q.q_no, q.id]));
+
+  // Delete existing then insert. Simpler than upsert with composite key.
+  await supabase.from("script_scores").delete().eq("script_id", scriptId);
+  type ScoreRow = {
+    script_id: string; question_id: string; marks: number | null;
+    is_na: boolean; is_nr: boolean; evaluated_by: string;
+  };
+  const rows: ScoreRow[] = [];
+  for (const s of scores) {
+    const qid = idByQNo.get(s.id);
+    if (!qid) continue;
+    rows.push({
+      script_id: scriptId, question_id: qid, marks: s.marks,
+      is_na: !!s.na, is_nr: !!s.nr, evaluated_by: user.id,
+    });
+  }
+  if (rows.length) {
+    const { error } = await supabase.from("script_scores").insert(rows);
+    if (error) throw error;
+  }
+
+  if ((script.status as string) === "allocated") {
+    await supabase.from("answer_scripts").update({ status: "in_progress" }).eq("id", scriptId);
+  }
+
+  await supabase.from("evaluation_audit").insert({
+    script_id: scriptId, actor_id: user.id, action: "save_scores", payload: { count: rows.length },
+  });
+  return { ok: true };
 }
 
-export async function submitScript(id: string) {
-  const s = SCRIPTS.find((x) => x.id === id);
-  if (s) s.status = "evaluated";
-  return delay({ ok: true });
+export async function submitScript(scriptId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  const total = await calcTotal(scriptId);
+  const { error } = await supabase
+    .from("answer_scripts")
+    .update({ status: "submitted", submitted_at: new Date().toISOString(), total_awarded: total })
+    .eq("id", scriptId);
+  if (error) throw error;
+  await supabase.from("evaluation_audit").insert({
+    script_id: scriptId, actor_id: user.id, action: "submit", payload: { total },
+  });
+  return { ok: true };
 }
 
-export async function rejectScript(id: string) {
-  const s = SCRIPTS.find((x) => x.id === id);
-  if (s) s.status = "rejected";
-  return delay({ ok: true });
+export async function rejectScript(scriptId: string, reason = "Rejected by faculty") {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  await supabase.from("script_rejections").insert({ script_id: scriptId, reason, rejected_by: user.id });
+  const { error } = await supabase
+    .from("answer_scripts")
+    .update({ status: "rejected", rejected_reason: reason })
+    .eq("id", scriptId);
+  if (error) throw error;
+  await supabase.from("evaluation_audit").insert({
+    script_id: scriptId, actor_id: user.id, action: "reject", payload: { reason },
+  });
+  return { ok: true };
+}
+
+async function calcTotal(scriptId: string): Promise<number> {
+  const { data } = await supabase.from("script_scores").select("marks").eq("script_id", scriptId);
+  return (data ?? []).reduce((s, r) => s + (r.marks ? Number(r.marks) : 0), 0);
 }
 
 export async function getStudentResults(): Promise<AnswerScript[]> {
-  return delay([makeScript("390", "evaluated", true)]);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data: stu } = await supabase.from("students").select("id").eq("user_id", user.id).maybeSingle();
+  if (!stu) return [];
+  const { data: scripts } = await supabase
+    .from("answer_scripts")
+    .select("id")
+    .eq("student_id", stu.id)
+    .eq("status", "submitted");
+  const out: AnswerScript[] = [];
+  for (const s of scripts ?? []) out.push(await getScript(s.id));
+  return out;
 }
