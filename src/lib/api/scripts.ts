@@ -27,6 +27,7 @@ export async function getScript(id: string): Promise<AnswerScript> {
     .maybeSingle();
   if (error) throw error;
   if (!script) throw new Error("Script not found");
+  if (!script.paper_id) throw new Error("Script has no paper assigned");
 
   const { data: questions } = await supabase
     .from("questions")
@@ -121,32 +122,31 @@ export async function saveScores(scriptId: string, scores: QuestionScore[]) {
 
   // Need question UUIDs by q_no. Get paper_id then questions.
   const { data: script } = await supabase.from("answer_scripts").select("paper_id, status").eq("id", scriptId).single();
-  if (!script) throw new Error("Script missing");
+  if (!script || !script.paper_id) throw new Error("Script missing or has no paper");
   const { data: qs } = await supabase.from("questions").select("id, q_no").eq("paper_id", script.paper_id);
   const idByQNo = new Map((qs ?? []).map((q) => [q.q_no, q.id]));
 
   // Delete existing then insert. Simpler than upsert with composite key.
   await supabase.from("script_scores").delete().eq("script_id", scriptId);
-  const rows = scores
-    .map((s) => {
-      const qid = idByQNo.get(s.id);
-      if (!qid) return null;
-      return {
-        script_id: scriptId,
-        question_id: qid,
-        marks: s.marks,
-        is_na: !!s.na,
-        is_nr: !!s.nr,
-        evaluated_by: user.id,
-      };
-    })
-    .filter(Boolean) as Array<Record<string, unknown>>;
+  type ScoreRow = {
+    script_id: string; question_id: string; marks: number | null;
+    is_na: boolean; is_nr: boolean; evaluated_by: string;
+  };
+  const rows: ScoreRow[] = [];
+  for (const s of scores) {
+    const qid = idByQNo.get(s.id);
+    if (!qid) continue;
+    rows.push({
+      script_id: scriptId, question_id: qid, marks: s.marks,
+      is_na: !!s.na, is_nr: !!s.nr, evaluated_by: user.id,
+    });
+  }
   if (rows.length) {
     const { error } = await supabase.from("script_scores").insert(rows);
     if (error) throw error;
   }
 
-  if (script.status === "allocated") {
+  if ((script.status as string) === "allocated") {
     await supabase.from("answer_scripts").update({ status: "in_progress" }).eq("id", scriptId);
   }
 
