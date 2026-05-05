@@ -8,9 +8,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   if (error) throw error;
   const counts = { evaluated: 0, partial: 0, pending: 0, allocated: 0, rejected: 0 };
   for (const r of data ?? []) {
-    const s = r.status as keyof typeof counts;
+    const s = r.status as string;
     if (s === "in_progress") counts.partial++;
-    else if (s === "submitted") counts.evaluated++;
+    else if (s === "submitted" || s === "evaluated") counts.evaluated++;
     else if (s in counts) (counts as Record<string, number>)[s]++;
   }
   return counts;
