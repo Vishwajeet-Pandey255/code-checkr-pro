@@ -468,6 +468,7 @@ export type Database = {
           paper_id: string
           parent_id: string | null
           q_no: string
+          section: string
           sort_order: number
           text: string | null
         }
@@ -478,6 +479,7 @@ export type Database = {
           paper_id: string
           parent_id?: string | null
           q_no: string
+          section?: string
           sort_order?: number
           text?: string | null
         }
@@ -488,6 +490,7 @@ export type Database = {
           paper_id?: string
           parent_id?: string | null
           q_no?: string
+          section?: string
           sort_order?: number
           text?: string | null
         }
