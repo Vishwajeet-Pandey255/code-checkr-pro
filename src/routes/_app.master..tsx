@@ -22,7 +22,7 @@ import { RoleGate } from "@/components/role-gate";
 import { listMaster, upsertMaster, deleteMaster, listOptions, type MasterExtras } from "@/lib/api/masters";
 import type { MasterRecord } from "@/types";
 
-export const Route = createFileRoute("/_app/master/$name")({
+export const Route = createFileRoute("/_app/master/")({
   component: () => (
     <RoleGate allow={["admin", "manager"]}>
       <MasterPage />
