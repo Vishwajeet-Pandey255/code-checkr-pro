@@ -214,3 +214,66 @@ export async function getStudentResults(): Promise<AnswerScript[]> {
   for (const s of scripts ?? []) out.push(await getScript(s.id));
   return out;
 }
+
+export async function uploadScriptPdfs(
+  files: File[],
+  paperId: string,
+): Promise<{ uploaded: number; failed: number }> {
+  const { data: paper } = await supabase
+    .from("question_papers").select("id, subject_id").eq("id", paperId).maybeSingle();
+  if (!paper) throw new Error("Question paper not found");
+
+  let uploaded = 0;
+  let failed = 0;
+  for (const file of files) {
+    try {
+      const code = `SCR-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      const path = `${paperId}/${code}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("answer-scripts")
+        .upload(path, file, { contentType: "application/pdf", upsert: false });
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabase.from("answer_scripts").insert({
+        script_code: code, paper_id: paperId, subject_id: paper.subject_id,
+        pdf_url: path, status: "pending" as const,
+      });
+      if (insErr) throw insErr;
+      uploaded++;
+    } catch (e) {
+      console.error("Upload failed", file.name, e);
+      failed++;
+    }
+  }
+  return { uploaded, failed };
+}
+
+export async function listAuditLog(): Promise<Array<{
+  created_at: string; action: string; actor: string; script: string; payload: string;
+}>> {
+  const { data, error } = await supabase
+    .from("evaluation_audit")
+    .select("created_at, action, payload, actor_id, script_id")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+  if (error) throw new Error(error.message);
+  const rows = data ?? [];
+  const actorIds = Array.from(new Set(rows.map((r) => r.actor_id).filter((x): x is string => !!x)));
+  const scriptIds = Array.from(new Set(rows.map((r) => r.script_id).filter((x): x is string => !!x)));
+  const [{ data: profiles }, { data: scripts }] = await Promise.all([
+    actorIds.length
+      ? supabase.from("profiles").select("id, full_name, email").in("id", actorIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+    scriptIds.length
+      ? supabase.from("answer_scripts").select("id, script_code").in("id", scriptIds)
+      : Promise.resolve({ data: [] as { id: string; script_code: string }[] }),
+  ]);
+  const pmap = new Map((profiles ?? []).map((p) => [p.id, p.full_name || p.email || p.id]));
+  const smap = new Map((scripts ?? []).map((s) => [s.id, s.script_code]));
+  return rows.map((r) => ({
+    created_at: r.created_at,
+    action: r.action,
+    actor: r.actor_id ? (pmap.get(r.actor_id) ?? r.actor_id) : "—",
+    script: r.script_id ? (smap.get(r.script_id) ?? r.script_id) : "—",
+    payload: r.payload ? JSON.stringify(r.payload) : "",
+  }));
+}
