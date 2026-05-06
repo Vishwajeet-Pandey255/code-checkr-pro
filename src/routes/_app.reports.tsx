@@ -12,6 +12,7 @@ import { Download, FilePieChart } from "lucide-react";
 import { toast } from "sonner";
 import { RoleGate } from "@/components/role-gate";
 import { listFaculty } from "@/lib/api/faculty";
+import { listAuditLog } from "@/lib/api/scripts";
 import type { Faculty } from "@/types";
 
 export const Route = createFileRoute("/_app/reports")({
@@ -43,6 +44,24 @@ function ReportsPage() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Report exported");
+  };
+
+  const exportAudit = async () => {
+    try {
+      const rows = await listAuditLog();
+      const header = ["When", "Actor", "Action", "Script", "Payload"];
+      const csvRows = rows.map((r) => [
+        new Date(r.created_at).toISOString(), r.actor, r.action, r.script,
+        `"${(r.payload || "").replace(/"/g, '""')}"`,
+      ]);
+      const csv = [header, ...csvRows].map((r) => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `evaluation-audit-${Date.now()}.csv`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${rows.length} audit entries`);
+    } catch (e) { toast.error((e as Error).message); }
   };
 
   const totals = faculty.reduce(
@@ -90,9 +109,14 @@ function ReportsPage() {
           </Select>
         </div>
         <div className="sm:col-span-2 flex justify-end">
-          <Button onClick={exportCsv}>
-            <Download className="h-4 w-4 mr-1" /> Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportAudit}>
+              <Download className="h-4 w-4 mr-1" /> Export Audit Log
+            </Button>
+            <Button onClick={exportCsv}>
+              <Download className="h-4 w-4 mr-1" /> Export CSV
+            </Button>
+          </div>
         </div>
       </Card>
 

@@ -42,6 +42,7 @@ export interface AnswerScript {
   examSeries: string;
   totalPages: number;
   pageImages: string[];   // URLs to scan images
+  pdfUrl?: string;        // signed URL for the answer-script PDF
   facultyId?: string;
   status: ScriptStatus;
   startedAt?: string;

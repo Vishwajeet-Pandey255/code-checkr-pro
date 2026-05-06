@@ -22,7 +22,7 @@ import { RoleGate } from "@/components/role-gate";
 import { listMaster, upsertMaster, deleteMaster, listOptions, type MasterExtras } from "@/lib/api/masters";
 import type { MasterRecord } from "@/types";
 
-export const Route = createFileRoute("/_app/master/$name")({
+export const Route = createFileRoute("/_app/master/")({
   component: () => (
     <RoleGate allow={["admin", "manager"]}>
       <MasterPage />
@@ -37,6 +37,7 @@ const TITLES: Record<string, string> = {
   "question-paper": "Question Paper", "evaluation-type": "Evaluation Rule",
 };
 
+// Module slug -> extra fields to render
 type ExtraField = { key: string; label: string; type: "text" | "number" | "textarea" | "ref"; refTable?: string };
 const EXTRA_FIELDS: Record<string, ExtraField[]> = {
   faculty: [
@@ -91,6 +92,7 @@ function MasterPage() {
   };
   useEffect(() => { refresh(); }, [name]);
 
+  // Load reference options for select fields
   useEffect(() => {
     const tables = fields.filter((f) => f.type === "ref" && f.refTable).map((f) => f.refTable!);
     const uniq = Array.from(new Set(tables));
