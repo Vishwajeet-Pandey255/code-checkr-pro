@@ -50,6 +50,21 @@ export async function seedDemoData(): Promise<{ summary: string }> {
     subject_id: subject.id, exam_session_id: exam.id, total_marks: 60,
   });
 
+  // Seed a faculty profile linked to the current user so allocation can work
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: existingFac } = await supabase
+      .from("faculty_profiles").select("id").eq("user_id", user.id).maybeSingle();
+    if (!existingFac) {
+      const { error } = await supabase.from("faculty_profiles").insert({
+        code: `FAC-${user.id.slice(0, 6)}`,
+        name: user.email?.split("@")[0] ?? "Demo Faculty",
+        email: user.email, college_id: college.id, user_id: user.id,
+      });
+      if (!error) log.push("+ faculty (you)");
+    }
+  }
+
   // Seed questions if none exist for this paper
   const { data: existingQs } = await supabase.from("questions").select("id").eq("paper_id", paper.id).limit(1);
   if (!existingQs?.length) {
