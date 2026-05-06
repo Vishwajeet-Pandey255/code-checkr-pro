@@ -270,19 +270,27 @@ function Evaluate() {
             </span>
           </div>
           <div className="flex-1 overflow-auto bg-muted/40 rounded p-4 flex items-start justify-center">
-            <div className="relative" style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}>
-              <img src={script.pageImages[page - 1]} alt={`Page ${page}`} className="block max-w-[640px] shadow-md" />
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={1100}
-                className="absolute inset-0 w-full h-full cursor-crosshair"
-                onMouseDown={onCanvasMouseDown}
-                onMouseMove={onCanvasMouseMove}
-                onMouseUp={onCanvasMouseUp}
-                onMouseLeave={onCanvasMouseUp}
+            {script.pdfUrl ? (
+              <iframe
+                src={script.pdfUrl}
+                title="Answer Script PDF"
+                className="w-full h-[80vh] bg-white shadow-md rounded"
               />
-            </div>
+            ) : (
+              <div className="relative" style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}>
+                <img src={script.pageImages[page - 1]} alt={`Page ${page}`} className="block max-w-[640px] shadow-md" />
+                <canvas
+                  ref={canvasRef}
+                  width={800}
+                  height={1100}
+                  className="absolute inset-0 w-full h-full cursor-crosshair"
+                  onMouseDown={onCanvasMouseDown}
+                  onMouseMove={onCanvasMouseMove}
+                  onMouseUp={onCanvasMouseUp}
+                  onMouseLeave={onCanvasMouseUp}
+                />
+              </div>
+            )}
           </div>
         </Card>
 
