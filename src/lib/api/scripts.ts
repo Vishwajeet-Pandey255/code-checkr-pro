@@ -67,6 +67,14 @@ export async function getScript(id: string): Promise<AnswerScript> {
   const paper = (script as unknown as { question_papers: { name: string; code: string; total_marks: number } | null }).question_papers;
   const subj = (script as unknown as { subjects: { name: string; code: string } | null }).subjects;
 
+  let pdfUrl: string | undefined;
+  if (script.pdf_url) {
+    const { data: signed } = await supabase.storage
+      .from("answer-scripts")
+      .createSignedUrl(script.pdf_url, 60 * 60);
+    pdfUrl = signed?.signedUrl;
+  }
+
   return {
     id: script.id,
     studentId: script.student_id ?? "",
@@ -77,6 +85,7 @@ export async function getScript(id: string): Promise<AnswerScript> {
     examSeries: script.script_code,
     totalPages,
     pageImages: Array.from({ length: totalPages }, (_, i) => PLACEHOLDER_PAGE(i + 1)),
+    pdfUrl,
     status: mapStatus(script.status),
     startedAt: script.assigned_at ?? new Date().toISOString(),
     questions: questionDefs,
