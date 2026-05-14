@@ -40,6 +40,7 @@ export interface AnswerScript {
 
   subjectCode: string;
   subjectName: string;
+  subjectId?: string;
 
   examCycle: string;
   examSeries: string;
