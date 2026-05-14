@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Pen, Check, X, HelpCircle,
-  Undo2, Info, AlertTriangle, ShieldCheck,
+  Undo2, Info, AlertTriangle, ShieldCheck, FileText, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,10 +10,15 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/role-gate";
 import { getScript, saveScores, submitScript, rejectScript } from "@/lib/api/scripts";
+import { getSubjectPaperBundle, type SubjectPaperBundle } from "@/lib/api/masters";
 import type { AnswerScript, QuestionScore } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -52,6 +57,9 @@ function Evaluate() {
   const [rejectReason, setRejectReason] = useState("");
   const [showRules, setShowRules] = useState(false);
   const [acceptedRules, setAcceptedRules] = useState(false);
+  const [showPaper, setShowPaper] = useState(false);
+  const [paperBundle, setPaperBundle] = useState<SubjectPaperBundle | null>(null);
+  const [paperLoading, setPaperLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(Date.now());
 
@@ -82,6 +90,16 @@ function Evaluate() {
   useEffect(() => {
     if (script && !acceptedRules) setShowRules(true);
   }, [script, acceptedRules]);
+
+  // ----- load subject paper bundle once -----
+  useEffect(() => {
+    if (!script?.subjectId) return;
+    setPaperLoading(true);
+    getSubjectPaperBundle(script.subjectId)
+      .then(setPaperBundle)
+      .catch((e) => toast.error((e as Error).message))
+      .finally(() => setPaperLoading(false));
+  }, [script?.subjectId]);
 
   // ----- annotation canvas -----
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -234,20 +252,9 @@ function Evaluate() {
           <Button size="sm" variant="outline" onClick={() => setShowRules(true)}>
             <Info className="h-4 w-4 mr-1" /> Rules
           </Button>
-<Button
-  size="sm"
-  variant="secondary"
-  onClick={() => {
-    if (script.questionPaperUrl) {
-      window.open(script.questionPaperUrl, "_blank");
-    } else {
-      toast.error("Question paper not available");
-    }
-  }}
->
-  Question Paper
-</Button>
-          <Button size="sm" variant="secondary">Answer Key</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowPaper(true)}>
+            <FileText className="h-4 w-4 mr-1" /> Question Paper
+          </Button>
           <Button size="sm" onClick={onSave}>Save</Button>
         </div>
       </Card>
@@ -468,6 +475,99 @@ function Evaluate() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmReject(false)}>Cancel</Button>
             <Button variant="destructive" onClick={onReject}>Reject</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Question Paper + Marking Scheme dialog */}
+      <Dialog open={showPaper} onOpenChange={setShowPaper}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Question Paper &amp; Marking Scheme
+            </DialogTitle>
+            <DialogDescription>
+              Reference material for {script.subjectName}. Use this while evaluating.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs defaultValue="qp" className="w-full">
+            <TabsList>
+              <TabsTrigger value="qp">Question Paper</TabsTrigger>
+              <TabsTrigger value="ms">Marking Scheme</TabsTrigger>
+            </TabsList>
+            <TabsContent value="qp" className="mt-3">
+              {paperLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : paperBundle?.questionPaperUrl ? (
+                <div className="space-y-2">
+                  <a href={paperBundle.questionPaperUrl} target="_blank" rel="noreferrer"
+                    className="text-xs text-primary inline-flex items-center gap-1">
+                    Open in new tab <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <iframe
+                    src={paperBundle.questionPaperUrl}
+                    title="Question Paper"
+                    className="w-full h-[65vh] bg-white rounded border"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No question paper has been uploaded for this subject yet.
+                </p>
+              )}
+            </TabsContent>
+            <TabsContent value="ms" className="mt-3 space-y-4">
+              {paperLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <>
+                  {paperBundle?.markingSchemeUrl ? (
+                    <div className="space-y-2">
+                      <a href={paperBundle.markingSchemeUrl} target="_blank" rel="noreferrer"
+                        className="text-xs text-primary inline-flex items-center gap-1">
+                        Open PDF in new tab <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <iframe
+                        src={paperBundle.markingSchemeUrl}
+                        title="Marking Scheme"
+                        className="w-full h-[40vh] bg-white rounded border"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No marking scheme PDF uploaded.</p>
+                  )}
+                  <div>
+                    <div className="text-sm font-semibold mb-2">Per-Question Max Marks</div>
+                    {paperBundle && paperBundle.markingScheme.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-24">Q No</TableHead>
+                            <TableHead className="w-28">Max Marks</TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paperBundle.markingScheme.map((r, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="font-mono">{r.q_no}</TableCell>
+                              <TableCell>{r.max_marks}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs">{r.notes ?? ""}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No structured marking scheme defined.</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+          <DialogFooter>
+            <Button onClick={() => setShowPaper(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

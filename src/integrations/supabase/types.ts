@@ -785,7 +785,12 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          marking_scheme: Json
+          marking_scheme_uploaded_at: string | null
+          marking_scheme_url: string | null
           name: string
+          question_paper_uploaded_at: string | null
+          question_paper_url: string | null
           semester_id: string | null
           updated_at: string
         }
@@ -795,7 +800,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          marking_scheme?: Json
+          marking_scheme_uploaded_at?: string | null
+          marking_scheme_url?: string | null
           name: string
+          question_paper_uploaded_at?: string | null
+          question_paper_url?: string | null
           semester_id?: string | null
           updated_at?: string
         }
@@ -805,7 +815,12 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          marking_scheme?: Json
+          marking_scheme_uploaded_at?: string | null
+          marking_scheme_url?: string | null
           name?: string
+          question_paper_uploaded_at?: string | null
+          question_paper_url?: string | null
           semester_id?: string | null
           updated_at?: string
         }

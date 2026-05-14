@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { RoleGate } from "@/components/role-gate";
 import { listMaster, upsertMaster, deleteMaster, listOptions, type MasterExtras } from "@/lib/api/masters";
 import type { MasterRecord } from "@/types";
+import { SubjectPapersEditor } from "@/components/subject-papers-editor";
 
 export const Route = createFileRoute("/_app/master/$name")({
   component: () => (
@@ -202,6 +203,9 @@ function MasterPage() {
                 />
                 <Label>Active</Label>
               </div>
+              {name === "subject" && (
+                <SubjectPapersEditor subjectId={editing?.id} />
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

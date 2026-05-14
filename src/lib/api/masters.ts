@@ -47,7 +47,7 @@ const EXTRA_COLS: Record<string, string[]> = {
   faculty_profiles: ["email", "phone", "college_id"],
   question_papers: ["subject_id", "exam_session_id", "total_marks","pdf_url",],
   evaluation_rules: ["title", "body"],
-  subjects: ["branch_id", "semester_id"],
+  subjects: ["branch_id", "semester_id", "marking_scheme"],
   branches: ["degree_id"],
   colleges: ["region_id"],
   exam_sessions: ["starts_on", "ends_on"],
@@ -139,4 +139,109 @@ export async function listOptions(
       label: `${r.name} (${r.code})`,
     })
   );
+}
+
+/* =========================================================
+   Subject Question Paper + Marking Scheme helpers
+========================================================= */
+
+export type MarkingSchemeRow = { q_no: string; max_marks: number; notes?: string };
+
+export type SubjectPaperBundle = {
+  questionPaperUrl: string | null;
+  markingSchemeUrl: string | null;
+  markingScheme: MarkingSchemeRow[];
+  questionPaperPath: string | null;
+  markingSchemePath: string | null;
+};
+
+const PAPER_BUCKET = "answer-scripts";
+
+async function uploadSubjectPdf(
+  subjectId: string,
+  kind: "qp" | "ms",
+  file: File,
+): Promise<string> {
+  if (!subjectId) throw new Error("Save the subject first, then upload the file.");
+  if (file.type !== "application/pdf") throw new Error("Only PDF files are allowed.");
+  const path = `subject-papers/${subjectId}/${kind}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const { error: upErr } = await supabase.storage
+    .from(PAPER_BUCKET)
+    .upload(path, file, { upsert: true, contentType: "application/pdf" });
+  if (upErr) throw new Error(upErr.message);
+
+  const col = kind === "qp" ? "question_paper_url" : "marking_scheme_url";
+  const tsCol = kind === "qp" ? "question_paper_uploaded_at" : "marking_scheme_uploaded_at";
+  const patch: Record<string, unknown> = { [col]: path, [tsCol]: new Date().toISOString() };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from("subjects" as any) as any).update(patch).eq("id", subjectId);
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+export async function uploadSubjectQuestionPaper(subjectId: string, file: File) {
+  return uploadSubjectPdf(subjectId, "qp", file);
+}
+
+export async function uploadSubjectMarkingScheme(subjectId: string, file: File) {
+  return uploadSubjectPdf(subjectId, "ms", file);
+}
+
+export async function removeSubjectPaper(subjectId: string, kind: "qp" | "ms") {
+  const col = kind === "qp" ? "question_paper_url" : "marking_scheme_url";
+  const tsCol = kind === "qp" ? "question_paper_uploaded_at" : "marking_scheme_uploaded_at";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: row } = await (supabase.from("subjects" as any) as any)
+    .select(`${col}`).eq("id", subjectId).maybeSingle();
+  const path = row?.[col] as string | undefined;
+  if (path) {
+    await supabase.storage.from(PAPER_BUCKET).remove([path]);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from("subjects" as any) as any)
+    .update({ [col]: null, [tsCol]: null }).eq("id", subjectId);
+  if (error) throw new Error(error.message);
+}
+
+export async function saveSubjectMarkingScheme(subjectId: string, rows: MarkingSchemeRow[]) {
+  const clean = rows
+    .filter((r) => r && r.q_no && String(r.q_no).trim())
+    .map((r) => ({
+      q_no: String(r.q_no).trim(),
+      max_marks: Number(r.max_marks) || 0,
+      notes: r.notes ?? "",
+    }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from("subjects" as any) as any)
+    .update({ marking_scheme: clean }).eq("id", subjectId);
+  if (error) throw new Error(error.message);
+}
+
+export async function getSubjectPaperBundle(subjectId: string): Promise<SubjectPaperBundle> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from("subjects" as any) as any)
+    .select("question_paper_url, marking_scheme_url, marking_scheme")
+    .eq("id", subjectId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const qpPath = (data?.question_paper_url as string | null) ?? null;
+  const msPath = (data?.marking_scheme_url as string | null) ?? null;
+  let qpSigned: string | null = null;
+  let msSigned: string | null = null;
+  if (qpPath) {
+    const { data: s } = await supabase.storage.from(PAPER_BUCKET).createSignedUrl(qpPath, 60 * 60);
+    qpSigned = s?.signedUrl ?? null;
+  }
+  if (msPath) {
+    const { data: s } = await supabase.storage.from(PAPER_BUCKET).createSignedUrl(msPath, 60 * 60);
+    msSigned = s?.signedUrl ?? null;
+  }
+  const scheme = Array.isArray(data?.marking_scheme) ? (data!.marking_scheme as MarkingSchemeRow[]) : [];
+  return {
+    questionPaperUrl: qpSigned,
+    markingSchemeUrl: msSigned,
+    markingScheme: scheme,
+    questionPaperPath: qpPath,
+    markingSchemePath: msPath,
+  };
 }
