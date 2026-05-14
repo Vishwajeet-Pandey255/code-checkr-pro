@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Pen, Check, X, HelpCircle,
-  Undo2, Info, AlertTriangle, ShieldCheck,
+  Undo2, Info, AlertTriangle, ShieldCheck, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,10 +10,15 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/role-gate";
 import { getScript, saveScores, submitScript, rejectScript } from "@/lib/api/scripts";
+import { getSubjectPaperBundle, type SubjectPaperBundle } from "@/lib/api/masters";
 import type { AnswerScript, QuestionScore } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
