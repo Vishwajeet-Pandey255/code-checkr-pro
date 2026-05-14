@@ -252,20 +252,9 @@ function Evaluate() {
           <Button size="sm" variant="outline" onClick={() => setShowRules(true)}>
             <Info className="h-4 w-4 mr-1" /> Rules
           </Button>
-<Button
-  size="sm"
-  variant="secondary"
-  onClick={() => {
-    if (script.questionPaperUrl) {
-      window.open(script.questionPaperUrl, "_blank");
-    } else {
-      toast.error("Question paper not available");
-    }
-  }}
->
-  Question Paper
-</Button>
-          <Button size="sm" variant="secondary">Answer Key</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowPaper(true)}>
+            <FileText className="h-4 w-4 mr-1" /> Question Paper
+          </Button>
           <Button size="sm" onClick={onSave}>Save</Button>
         </div>
       </Card>
