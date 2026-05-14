@@ -22,6 +22,7 @@ export type Database = {
           id: string
           paper_id: string | null
           pdf_url: string | null
+          question_paper_url: string | null
           rejected_reason: string | null
           script_code: string
           status: Database["public"]["Enums"]["script_status"]
@@ -38,6 +39,7 @@ export type Database = {
           id?: string
           paper_id?: string | null
           pdf_url?: string | null
+          question_paper_url?: string | null
           rejected_reason?: string | null
           script_code: string
           status?: Database["public"]["Enums"]["script_status"]
@@ -54,6 +56,7 @@ export type Database = {
           id?: string
           paper_id?: string | null
           pdf_url?: string | null
+          question_paper_url?: string | null
           rejected_reason?: string | null
           script_code?: string
           status?: Database["public"]["Enums"]["script_status"]
@@ -83,6 +86,69 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      answer_sheet_extractions: {
+        Row: {
+          booklet_serial_no: string | null
+          branch: string | null
+          candidate_roll_number: string | null
+          created_at: string | null
+          date_of_exam: string | null
+          file_name: string | null
+          id: string
+          page_number: number | null
+          paper_id: string | null
+          raw_ocr_text: string | null
+          script_id: string | null
+          semester_year: string | null
+          status: string | null
+        }
+        Insert: {
+          booklet_serial_no?: string | null
+          branch?: string | null
+          candidate_roll_number?: string | null
+          created_at?: string | null
+          date_of_exam?: string | null
+          file_name?: string | null
+          id?: string
+          page_number?: number | null
+          paper_id?: string | null
+          raw_ocr_text?: string | null
+          script_id?: string | null
+          semester_year?: string | null
+          status?: string | null
+        }
+        Update: {
+          booklet_serial_no?: string | null
+          branch?: string | null
+          candidate_roll_number?: string | null
+          created_at?: string | null
+          date_of_exam?: string | null
+          file_name?: string | null
+          id?: string
+          page_number?: number | null
+          paper_id?: string | null
+          raw_ocr_text?: string | null
+          script_id?: string | null
+          semester_year?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_sheet_extractions_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "question_papers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answer_sheet_extractions_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "answer_scripts"
             referencedColumns: ["id"]
           },
         ]
