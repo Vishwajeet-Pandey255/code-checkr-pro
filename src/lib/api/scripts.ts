@@ -167,6 +167,7 @@ export async function getScript(id: string): Promise<AnswerScript> {
     studentName: "Anonymous Candidate",
     subjectCode: subj?.code ?? "",
     subjectName: subj?.name ?? paper?.name ?? "Subject",
+    subjectId: script.subject_id ?? undefined,
     examCycle: "",
     examSeries: script.script_code,
     totalPages,
