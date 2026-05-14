@@ -57,6 +57,9 @@ function Evaluate() {
   const [rejectReason, setRejectReason] = useState("");
   const [showRules, setShowRules] = useState(false);
   const [acceptedRules, setAcceptedRules] = useState(false);
+  const [showPaper, setShowPaper] = useState(false);
+  const [paperBundle, setPaperBundle] = useState<SubjectPaperBundle | null>(null);
+  const [paperLoading, setPaperLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(Date.now());
 
@@ -87,6 +90,16 @@ function Evaluate() {
   useEffect(() => {
     if (script && !acceptedRules) setShowRules(true);
   }, [script, acceptedRules]);
+
+  // ----- load subject paper bundle once -----
+  useEffect(() => {
+    if (!script?.subjectId) return;
+    setPaperLoading(true);
+    getSubjectPaperBundle(script.subjectId)
+      .then(setPaperBundle)
+      .catch((e) => toast.error((e as Error).message))
+      .finally(() => setPaperLoading(false));
+  }, [script?.subjectId]);
 
   // ----- annotation canvas -----
   const canvasRef = useRef<HTMLCanvasElement>(null);
