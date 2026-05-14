@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Pen, Check, X, HelpCircle,
-  Undo2, Info, AlertTriangle, ShieldCheck, FileText,
+  Undo2, Info, AlertTriangle, ShieldCheck, FileText, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
