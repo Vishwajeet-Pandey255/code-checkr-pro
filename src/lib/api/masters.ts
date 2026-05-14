@@ -47,7 +47,7 @@ const EXTRA_COLS: Record<string, string[]> = {
   faculty_profiles: ["email", "phone", "college_id"],
   question_papers: ["subject_id", "exam_session_id", "total_marks","pdf_url",],
   evaluation_rules: ["title", "body"],
-  subjects: ["branch_id", "semester_id"],
+  subjects: ["branch_id", "semester_id", "marking_scheme"],
   branches: ["degree_id"],
   colleges: ["region_id"],
   exam_sessions: ["starts_on", "ends_on"],
