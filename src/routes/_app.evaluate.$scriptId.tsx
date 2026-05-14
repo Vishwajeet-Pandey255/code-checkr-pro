@@ -481,6 +481,7 @@ function Evaluate() {
 
       {/* Rules & regulations dialog */}
       <Dialog open={showRules} onOpenChange={setShowRules}>
+        {/* moved below */}
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
