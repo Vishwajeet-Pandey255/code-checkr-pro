@@ -5,10 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Send } from "lucide-react";
@@ -35,13 +44,26 @@ function AllocationPage() {
   const [paperId, setPaperId] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const refresh = () => listAllocationFaculty().then(setFaculty).catch((e) => toast.error(e.message));
+ const refresh = async () => {
+  try {
+    const rows = await listAllocationFaculty();
+    console.log("FACULTY:", rows);
+    setFaculty(rows);
+  } catch (e: any) {
+    console.error("FULL ERROR MESSAGE:", e?.message);
+    console.error("FULL ERROR OBJECT:", e);
+    toast.error(e?.message || "Failed to load faculty");
+  }
+};
   useEffect(() => {
-    refresh();
-    listOptions("question_papers").then((opts) => {
-      setPapers(opts);
-      if (opts[0]) setPaperId(opts[0].id);
-    });
+    void refresh();
+
+    listOptions("question_papers")
+      .then((opts) => {
+        setPapers(opts);
+        if (opts[0]) setPaperId(opts[0].id);
+      })
+      .catch((e) => toast.error(e.message));
   }, []);
 
   const toggle = (id: string) => {
@@ -57,23 +79,30 @@ function AllocationPage() {
       const r = await allocateScripts([...selected]);
       toast.success(`Allocated ${r.allocated} scripts to ${selected.size} faculty`);
       setSelected(new Set());
-      refresh();
-    } catch (e) { toast.error((e as Error).message); }
-    setBusy(false);
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Allocation failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onUpload = async () => {
     const files = fileRef.current?.files;
     if (!files || !files.length) return toast.error("Choose one or more PDFs");
     if (!paperId) return toast.error("Choose a Question Paper first");
+
     setBusy(true);
     try {
       const r = await uploadScriptPdfs(Array.from(files), paperId);
       toast.success(`Uploaded ${r.uploaded} script(s)${r.failed ? `, ${r.failed} failed` : ""}`);
       if (fileRef.current) fileRef.current.value = "";
-      refresh();
-    } catch (e) { toast.error((e as Error).message); }
-    setBusy(false);
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -93,18 +122,35 @@ function AllocationPage() {
           <div className="grid gap-1">
             <Label>Question Paper</Label>
             <Select value={paperId} onValueChange={setPaperId}>
-              <SelectTrigger><SelectValue placeholder="Pick a paper" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a paper" />
+              </SelectTrigger>
               <SelectContent>
-                {papers.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
-                {papers.length === 0 && <div className="p-2 text-xs text-muted-foreground">Create a paper under Masters → Question Paper first.</div>}
+                {papers.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+                {papers.length === 0 && (
+                  <div className="p-2 text-xs text-muted-foreground">
+                    Create a paper under Masters → Question Paper first.
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>
+
           <div className="grid gap-1">
             <Label>Choose PDFs</Label>
-            <input ref={fileRef} type="file" accept="application/pdf" multiple
-              className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:bg-muted" />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:bg-muted"
+            />
           </div>
+
           <div className="flex items-end">
             <Button onClick={onUpload} disabled={busy} className="w-full">
               <Upload className="h-4 w-4 mr-1" /> Upload
@@ -125,6 +171,7 @@ function AllocationPage() {
             <Send className="h-4 w-4 mr-1" /> Allocate to {selected.size} faculty
           </Button>
         </div>
+
         <Table>
           <TableHeader>
             <TableRow>
@@ -139,10 +186,13 @@ function AllocationPage() {
           </TableHeader>
           <TableBody>
             {faculty.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">
-                No faculty yet. Add one under Masters → Faculty (link it to a user account to enable allocation).
-              </TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
+                  No faculty yet. Add one under Masters → Faculty (link it to a user account to enable allocation).
+                </TableCell>
+              </TableRow>
             )}
+
             {faculty.map((f) => (
               <TableRow key={f.id}>
                 <TableCell>
@@ -151,7 +201,9 @@ function AllocationPage() {
                 <TableCell className="font-medium">{f.name}</TableCell>
                 <TableCell className="text-muted-foreground">{f.collegeName}</TableCell>
                 <TableCell>
-                  <Badge variant={f.type === "Internal Faculty" ? "default" : "secondary"}>{f.type}</Badge>
+                  <Badge variant={f.type === "Internal Faculty" ? "default" : "secondary"}>
+                    {f.type}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">{f.allocated}</TableCell>
                 <TableCell className="text-right">{f.evaluated}</TableCell>

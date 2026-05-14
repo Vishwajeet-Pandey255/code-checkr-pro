@@ -20,51 +20,66 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
-const ROLE_PRIORITY: Role[] = ["admin", "manager", "faculty", "student"];
+// 🔥 YOUR ADMIN EMAIL
+const FORCE_ADMIN_EMAIL = "pandeyvishwajeet61@gmail.com";
 
 async function loadUser(session: Session | null): Promise<User | null> {
   if (!session?.user) return null;
+
   const uid = session.user.id;
-  const [{ data: profile }, { data: roles }] = await Promise.all([
-    supabase.from("profiles").select("full_name, email, college_code").eq("id", uid).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", uid),
-  ]);
+  const email = session.user.email ?? "";
+
+  // get roles from DB
+  const { data: roles } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", uid);
+
   const userRoles = (roles ?? []).map((r) => r.role as Role);
-  const role =
-    ROLE_PRIORITY.find((r) => userRoles.includes(r)) ?? ("student" as Role);
+
+  // force correct priority
+  let role: Role = "student";
+
+  if (userRoles.includes("admin")) role = "admin";
+  else if (userRoles.includes("manager")) role = "manager";
+  else if (userRoles.includes("faculty")) role = "faculty";
+
   return {
     id: uid,
-    name: profile?.full_name ?? session.user.email ?? "User",
-    email: profile?.email ?? session.user.email ?? "",
+    name: email,
+    email,
     role,
-    collegeCode: profile?.college_code ?? undefined,
+    collegeCode: undefined,
   };
 }
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Listener FIRST (synchronous state set; defer any supabase calls)
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
       setSession(sess);
+
       if (sess) {
-        setTimeout(() => {
-          loadUser(sess).then(setUser);
+        setTimeout(async () => {
+          const u = await loadUser(sess);
+          setUser(u);
         }, 0);
       } else {
         setUser(null);
       }
     });
-    // 2. Then fetch existing session
-    supabase.auth.getSession().then(({ data }) => {
+
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      loadUser(data.session)
-        .then(setUser)
-        .finally(() => setLoading(false));
+
+      const u = await loadUser(data.session);
+      setUser(u);
+
+      setLoading(false);
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -74,15 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp: AuthCtx["signUp"] = async (email, password, fullName) => {
-    const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo: `${window.location.origin}/`,
         data: { full_name: fullName },
       },
     });
+
     return { error: error?.message ?? null };
   };
 
@@ -90,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
+
     return { error: error?.message ?? null };
   };
 
@@ -98,12 +114,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshRoles = async () => {
-    setUser(await loadUser(session));
+    if (!session) return;
+    const u = await loadUser(session);
+    setUser(u);
   };
 
   return (
     <Ctx.Provider
-      value={{ user, session, loading, signIn, signUp, resetPassword, logout, refreshRoles }}
+      value={{
+        user,
+        session,
+        loading,
+        signIn,
+        signUp,
+        resetPassword,
+        logout,
+        refreshRoles,
+      }}
     >
       {children}
     </Ctx.Provider>

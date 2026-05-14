@@ -52,7 +52,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground font-bold">iE</div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold text-sidebar-foreground">IntelliExams</span>
+            <span className="text-sm font-semibold text-sidebar-foreground">AISECT Online</span>
             <span className="text-[10px] text-sidebar-foreground/60">OSM · Copy Checking</span>
           </div>
         </div>

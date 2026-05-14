@@ -45,7 +45,7 @@ export async function listMaster(name: string): Promise<(MasterRecord & { extras
 // Allowed extra columns per table (whitelist; unknown keys are dropped)
 const EXTRA_COLS: Record<string, string[]> = {
   faculty_profiles: ["email", "phone", "college_id"],
-  question_papers: ["subject_id", "exam_session_id", "total_marks"],
+  question_papers: ["subject_id", "exam_session_id", "total_marks","pdf_url",],
   evaluation_rules: ["title", "body"],
   subjects: ["branch_id", "semester_id"],
   branches: ["degree_id"],
@@ -101,13 +101,42 @@ export async function deleteMaster(name: string, id: string) {
 }
 
 // Lightweight reference loader for select dropdowns
-export async function listOptions(table: string): Promise<{ id: string; label: string }[]> {
+export async function listOptions(
+  table: string
+): Promise<{ id: string; label: string }[]> {
+
+  // SPECIAL CASE FOR QUESTION PAPERS
+  if (table === "question_papers") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase
+      .from(table as any) as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      return [];
+    }
+
+    return (data ?? []).map((p: any) => ({
+      id: p.id,
+      label: `${p.name} (${p.code})`,
+    }));
+  }
+
+  // DEFAULT FOR OTHER TABLES
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from(table as any) as any)
+  const { data, error } = await (supabase
+    .from(table as any) as any)
     .select("id, code, name")
     .order("name");
+
   if (error) return [];
-  return (data ?? []).map((r: { id: string; code: string; name: string }) => ({
-    id: r.id, label: `${r.name} (${r.code})`,
-  }));
+
+  return (data ?? []).map(
+    (r: { id: string; code: string; name: string }) => ({
+      id: r.id,
+      label: `${r.name} (${r.code})`,
+    })
+  );
 }

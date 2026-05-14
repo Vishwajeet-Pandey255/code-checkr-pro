@@ -34,20 +34,34 @@ export interface QuestionScore {
 
 export interface AnswerScript {
   id: string;
+
   studentId: string;
   studentName: string;
+
   subjectCode: string;
   subjectName: string;
+
   examCycle: string;
   examSeries: string;
+
   totalPages: number;
-  pageImages: string[];   // URLs to scan images
-  pdfUrl?: string;        // signed URL for the answer-script PDF
+
+  pageImages: string[]; // URLs to scan images
+
+  pdfUrl?: string; // answer script PDF URL
+
+  questionPaperUrl?: string; // REAL question paper PDF URL
+
   facultyId?: string;
+
   status: ScriptStatus;
+
   startedAt?: string;
+
   questions: QuestionDef[];
+
   scores: QuestionScore[];
+
   maxMarks: number;
 }
 

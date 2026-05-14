@@ -58,7 +58,7 @@ function LoginPage() {
               iE
             </div>
             <div className="text-left">
-              <h1 className="text-2xl font-bold">IntelliExams OSM</h1>
+              <h1 className="text-2xl font-bold">AISECT Online OSM</h1>
               <p className="text-sm text-muted-foreground">Online Script Marking</p>
             </div>
           </div>
