@@ -479,9 +479,101 @@ function Evaluate() {
         </DialogContent>
       </Dialog>
 
+      {/* Question Paper + Marking Scheme dialog */}
+      <Dialog open={showPaper} onOpenChange={setShowPaper}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Question Paper &amp; Marking Scheme
+            </DialogTitle>
+            <DialogDescription>
+              Reference material for {script.subjectName}. Use this while evaluating.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs defaultValue="qp" className="w-full">
+            <TabsList>
+              <TabsTrigger value="qp">Question Paper</TabsTrigger>
+              <TabsTrigger value="ms">Marking Scheme</TabsTrigger>
+            </TabsList>
+            <TabsContent value="qp" className="mt-3">
+              {paperLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : paperBundle?.questionPaperUrl ? (
+                <div className="space-y-2">
+                  <a href={paperBundle.questionPaperUrl} target="_blank" rel="noreferrer"
+                    className="text-xs text-primary inline-flex items-center gap-1">
+                    Open in new tab <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <iframe
+                    src={paperBundle.questionPaperUrl}
+                    title="Question Paper"
+                    className="w-full h-[65vh] bg-white rounded border"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No question paper has been uploaded for this subject yet.
+                </p>
+              )}
+            </TabsContent>
+            <TabsContent value="ms" className="mt-3 space-y-4">
+              {paperLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <>
+                  {paperBundle?.markingSchemeUrl ? (
+                    <div className="space-y-2">
+                      <a href={paperBundle.markingSchemeUrl} target="_blank" rel="noreferrer"
+                        className="text-xs text-primary inline-flex items-center gap-1">
+                        Open PDF in new tab <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <iframe
+                        src={paperBundle.markingSchemeUrl}
+                        title="Marking Scheme"
+                        className="w-full h-[40vh] bg-white rounded border"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No marking scheme PDF uploaded.</p>
+                  )}
+                  <div>
+                    <div className="text-sm font-semibold mb-2">Per-Question Max Marks</div>
+                    {paperBundle && paperBundle.markingScheme.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-24">Q No</TableHead>
+                            <TableHead className="w-28">Max Marks</TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paperBundle.markingScheme.map((r, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="font-mono">{r.q_no}</TableCell>
+                              <TableCell>{r.max_marks}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs">{r.notes ?? ""}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No structured marking scheme defined.</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+          <DialogFooter>
+            <Button onClick={() => setShowPaper(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Rules & regulations dialog */}
       <Dialog open={showRules} onOpenChange={setShowRules}>
-        {/* moved below */}
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
