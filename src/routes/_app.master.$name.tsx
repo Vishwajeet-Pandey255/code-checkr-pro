@@ -203,8 +203,8 @@ function MasterPage() {
                 />
                 <Label>Active</Label>
               </div>
-              {name === "subject" && (
-                <SubjectPapersEditor subjectId={editing?.id} />
+              {name === "question-paper" && (
+                <SubjectPapersEditor owner="paper" ownerId={editing?.id} />
               )}
             </div>
             <DialogFooter>

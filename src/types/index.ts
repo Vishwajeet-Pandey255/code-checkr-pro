@@ -41,6 +41,7 @@ export interface AnswerScript {
   subjectCode: string;
   subjectName: string;
   subjectId?: string;
+  paperId?: string;
 
   examCycle: string;
   examSeries: string;

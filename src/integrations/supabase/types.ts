@@ -482,7 +482,12 @@ export type Database = {
           exam_session_id: string | null
           id: string
           is_active: boolean
+          marking_scheme: Json
+          marking_scheme_uploaded_at: string | null
+          marking_scheme_url: string | null
           name: string
+          question_paper_uploaded_at: string | null
+          question_paper_url: string | null
           subject_id: string | null
           total_marks: number
           updated_at: string
@@ -493,7 +498,12 @@ export type Database = {
           exam_session_id?: string | null
           id?: string
           is_active?: boolean
+          marking_scheme?: Json
+          marking_scheme_uploaded_at?: string | null
+          marking_scheme_url?: string | null
           name: string
+          question_paper_uploaded_at?: string | null
+          question_paper_url?: string | null
           subject_id?: string | null
           total_marks?: number
           updated_at?: string
@@ -504,7 +514,12 @@ export type Database = {
           exam_session_id?: string | null
           id?: string
           is_active?: boolean
+          marking_scheme?: Json
+          marking_scheme_uploaded_at?: string | null
+          marking_scheme_url?: string | null
           name?: string
+          question_paper_uploaded_at?: string | null
+          question_paper_url?: string | null
           subject_id?: string | null
           total_marks?: number
           updated_at?: string

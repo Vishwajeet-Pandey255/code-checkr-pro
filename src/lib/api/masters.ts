@@ -157,14 +157,22 @@ export type SubjectPaperBundle = {
 
 const PAPER_BUCKET = "answer-scripts";
 
-async function uploadSubjectPdf(
-  subjectId: string,
+type PaperOwner = "subject" | "paper";
+const OWNER_TABLE: Record<PaperOwner, string> = {
+  subject: "subjects",
+  paper: "question_papers",
+};
+
+async function uploadOwnerPdf(
+  owner: PaperOwner,
+  ownerId: string,
   kind: "qp" | "ms",
   file: File,
 ): Promise<string> {
-  if (!subjectId) throw new Error("Save the subject first, then upload the file.");
+  if (!ownerId) throw new Error("Save the record first, then upload the file.");
   if (file.type !== "application/pdf") throw new Error("Only PDF files are allowed.");
-  const path = `subject-papers/${subjectId}/${kind}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const folder = owner === "subject" ? "subject-papers" : "question-papers";
+  const path = `${folder}/${ownerId}/${kind}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const { error: upErr } = await supabase.storage
     .from(PAPER_BUCKET)
     .upload(path, file, { upsert: true, contentType: "application/pdf" });
@@ -174,36 +182,37 @@ async function uploadSubjectPdf(
   const tsCol = kind === "qp" ? "question_paper_uploaded_at" : "marking_scheme_uploaded_at";
   const patch: Record<string, unknown> = { [col]: path, [tsCol]: new Date().toISOString() };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("subjects" as any) as any).update(patch).eq("id", subjectId);
+  const { error } = await (supabase.from(OWNER_TABLE[owner] as any) as any).update(patch).eq("id", ownerId);
   if (error) throw new Error(error.message);
   return path;
 }
 
-export async function uploadSubjectQuestionPaper(subjectId: string, file: File) {
-  return uploadSubjectPdf(subjectId, "qp", file);
+export async function uploadOwnerQuestionPaper(owner: PaperOwner, ownerId: string, file: File) {
+  return uploadOwnerPdf(owner, ownerId, "qp", file);
 }
 
-export async function uploadSubjectMarkingScheme(subjectId: string, file: File) {
-  return uploadSubjectPdf(subjectId, "ms", file);
+export async function uploadOwnerMarkingScheme(owner: PaperOwner, ownerId: string, file: File) {
+  return uploadOwnerPdf(owner, ownerId, "ms", file);
 }
 
-export async function removeSubjectPaper(subjectId: string, kind: "qp" | "ms") {
+export async function removeOwnerPaper(owner: PaperOwner, ownerId: string, kind: "qp" | "ms") {
   const col = kind === "qp" ? "question_paper_url" : "marking_scheme_url";
   const tsCol = kind === "qp" ? "question_paper_uploaded_at" : "marking_scheme_uploaded_at";
+  const table = OWNER_TABLE[owner];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row } = await (supabase.from("subjects" as any) as any)
-    .select(`${col}`).eq("id", subjectId).maybeSingle();
+  const { data: row } = await (supabase.from(table as any) as any)
+    .select(`${col}`).eq("id", ownerId).maybeSingle();
   const path = row?.[col] as string | undefined;
   if (path) {
     await supabase.storage.from(PAPER_BUCKET).remove([path]);
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("subjects" as any) as any)
-    .update({ [col]: null, [tsCol]: null }).eq("id", subjectId);
+  const { error } = await (supabase.from(table as any) as any)
+    .update({ [col]: null, [tsCol]: null }).eq("id", ownerId);
   if (error) throw new Error(error.message);
 }
 
-export async function saveSubjectMarkingScheme(subjectId: string, rows: MarkingSchemeRow[]) {
+export async function saveOwnerMarkingScheme(owner: PaperOwner, ownerId: string, rows: MarkingSchemeRow[]) {
   const clean = rows
     .filter((r) => r && r.q_no && String(r.q_no).trim())
     .map((r) => ({
@@ -211,17 +220,19 @@ export async function saveSubjectMarkingScheme(subjectId: string, rows: MarkingS
       max_marks: Number(r.max_marks) || 0,
       notes: r.notes ?? "",
     }));
+  const table = OWNER_TABLE[owner];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("subjects" as any) as any)
-    .update({ marking_scheme: clean }).eq("id", subjectId);
+  const { error } = await (supabase.from(table as any) as any)
+    .update({ marking_scheme: clean }).eq("id", ownerId);
   if (error) throw new Error(error.message);
 }
 
-export async function getSubjectPaperBundle(subjectId: string): Promise<SubjectPaperBundle> {
+export async function getOwnerPaperBundle(owner: PaperOwner, ownerId: string): Promise<SubjectPaperBundle> {
+  const table = OWNER_TABLE[owner];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("subjects" as any) as any)
+  const { data, error } = await (supabase.from(table as any) as any)
     .select("question_paper_url, marking_scheme_url, marking_scheme")
-    .eq("id", subjectId)
+    .eq("id", ownerId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   const qpPath = (data?.question_paper_url as string | null) ?? null;
@@ -245,3 +256,10 @@ export async function getSubjectPaperBundle(subjectId: string): Promise<SubjectP
     markingSchemePath: msPath,
   };
 }
+
+// Back-compat wrappers (subject-keyed) — kept so existing callers keep working.
+export const uploadSubjectQuestionPaper = (id: string, f: File) => uploadOwnerQuestionPaper("subject", id, f);
+export const uploadSubjectMarkingScheme = (id: string, f: File) => uploadOwnerMarkingScheme("subject", id, f);
+export const removeSubjectPaper = (id: string, kind: "qp" | "ms") => removeOwnerPaper("subject", id, kind);
+export const saveSubjectMarkingScheme = (id: string, rows: MarkingSchemeRow[]) => saveOwnerMarkingScheme("subject", id, rows);
+export const getSubjectPaperBundle = (id: string) => getOwnerPaperBundle("subject", id);
