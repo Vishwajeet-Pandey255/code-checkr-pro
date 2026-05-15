@@ -18,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/role-gate";
 import { getScript, saveScores, submitScript, rejectScript } from "@/lib/api/scripts";
-import { getSubjectPaperBundle, type SubjectPaperBundle } from "@/lib/api/masters";
+import { getOwnerPaperBundle, type SubjectPaperBundle } from "@/lib/api/masters";
 import type { AnswerScript, QuestionScore } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -91,15 +91,18 @@ function Evaluate() {
     if (script && !acceptedRules) setShowRules(true);
   }, [script, acceptedRules]);
 
-  // ----- load subject paper bundle once -----
+  // ----- load paper bundle (prefer paper-level, fall back to subject-level) -----
   useEffect(() => {
-    if (!script?.subjectId) return;
+    if (!script) return;
+    const owner = script.paperId ? "paper" : script.subjectId ? "subject" : null;
+    const ownerId = script.paperId ?? script.subjectId;
+    if (!owner || !ownerId) return;
     setPaperLoading(true);
-    getSubjectPaperBundle(script.subjectId)
+    getOwnerPaperBundle(owner, ownerId)
       .then(setPaperBundle)
       .catch((e) => toast.error((e as Error).message))
       .finally(() => setPaperLoading(false));
-  }, [script?.subjectId]);
+  }, [script?.paperId, script?.subjectId]);
 
   // ----- annotation canvas -----
   const canvasRef = useRef<HTMLCanvasElement>(null);
