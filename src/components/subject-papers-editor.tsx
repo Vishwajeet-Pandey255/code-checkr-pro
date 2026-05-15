@@ -6,15 +6,26 @@ import { Card } from "@/components/ui/card";
 import { Plus, Trash2, Upload, ExternalLink, X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  uploadSubjectQuestionPaper,
-  uploadSubjectMarkingScheme,
-  removeSubjectPaper,
-  saveSubjectMarkingScheme,
-  getSubjectPaperBundle,
+  uploadOwnerQuestionPaper,
+  uploadOwnerMarkingScheme,
+  removeOwnerPaper,
+  saveOwnerMarkingScheme,
+  getOwnerPaperBundle,
   type MarkingSchemeRow,
 } from "@/lib/api/masters";
 
-export function SubjectPapersEditor({ subjectId }: { subjectId?: string }) {
+type Owner = "subject" | "paper";
+
+export function SubjectPapersEditor({
+  subjectId,
+  owner = "subject",
+  ownerId,
+}: {
+  subjectId?: string;
+  owner?: Owner;
+  ownerId?: string;
+}) {
+  const id = ownerId ?? subjectId;
   const [qpUrl, setQpUrl] = useState<string | null>(null);
   const [msUrl, setMsUrl] = useState<string | null>(null);
   const [qpPath, setQpPath] = useState<string | null>(null);
@@ -25,10 +36,10 @@ export function SubjectPapersEditor({ subjectId }: { subjectId?: string }) {
   const msRef = useRef<HTMLInputElement>(null);
 
   const reload = async () => {
-    if (!subjectId) return;
+    if (!id) return;
     setLoading(true);
     try {
-      const b = await getSubjectPaperBundle(subjectId);
+      const b = await getOwnerPaperBundle(owner, id);
       setQpUrl(b.questionPaperUrl);
       setMsUrl(b.markingSchemeUrl);
       setQpPath(b.questionPaperPath);
@@ -41,20 +52,20 @@ export function SubjectPapersEditor({ subjectId }: { subjectId?: string }) {
     }
   };
 
-  useEffect(() => { reload(); }, [subjectId]);
+  useEffect(() => { reload(); }, [id, owner]);
 
-  if (!subjectId) {
+  if (!id) {
     return (
       <Card className="p-3 text-xs text-muted-foreground">
-        Save the subject first to enable Question Paper & Marking Scheme uploads.
+        Save the record first to enable Question Paper & Marking Scheme uploads.
       </Card>
     );
   }
 
   const onUpload = async (kind: "qp" | "ms", file: File) => {
     try {
-      if (kind === "qp") await uploadSubjectQuestionPaper(subjectId, file);
-      else await uploadSubjectMarkingScheme(subjectId, file);
+      if (kind === "qp") await uploadOwnerQuestionPaper(owner, id, file);
+      else await uploadOwnerMarkingScheme(owner, id, file);
       toast.success("Uploaded");
       await reload();
     } catch (e) { toast.error((e as Error).message); }
@@ -62,7 +73,7 @@ export function SubjectPapersEditor({ subjectId }: { subjectId?: string }) {
 
   const onRemove = async (kind: "qp" | "ms") => {
     try {
-      await removeSubjectPaper(subjectId, kind);
+      await removeOwnerPaper(owner, id, kind);
       toast.success("Removed");
       await reload();
     } catch (e) { toast.error((e as Error).message); }
@@ -70,7 +81,7 @@ export function SubjectPapersEditor({ subjectId }: { subjectId?: string }) {
 
   const onSaveScheme = async () => {
     try {
-      await saveSubjectMarkingScheme(subjectId, scheme);
+      await saveOwnerMarkingScheme(owner, id, scheme);
       toast.success("Marking scheme saved");
     } catch (e) { toast.error((e as Error).message); }
   };
