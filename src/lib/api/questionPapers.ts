@@ -28,11 +28,8 @@ export async function uploadQuestionPaper(
   const { error } = await supabase
     .from("question_papers")
     .insert({
-      title: data.title,
-      subject_code: data.subject_code,
-      subject_name: data.subject_name,
-      exam_cycle: data.exam_cycle,
-      pdf_url: pdfUrl,
+      code: data.subject_code,
+      name: data.title,
     });
 
   if (error) throw error;
