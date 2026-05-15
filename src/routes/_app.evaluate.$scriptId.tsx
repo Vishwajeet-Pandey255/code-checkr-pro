@@ -18,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/role-gate";
 import { getScript, saveScores, submitScript, rejectScript } from "@/lib/api/scripts";
-import { getOwnerPaperBundle, type SubjectPaperBundle } from "@/lib/api/masters";
+import { getOwnerPaperBundle, getPaperBundleForSubject, type SubjectPaperBundle } from "@/lib/api/masters";
 import type { AnswerScript, QuestionScore } from "@/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -91,17 +91,33 @@ function Evaluate() {
     if (script && !acceptedRules) setShowRules(true);
   }, [script, acceptedRules]);
 
-  // ----- load paper bundle (prefer paper-level, fall back to subject-level) -----
+  // ----- load paper bundle: try paper-level, then paper-by-subject, then subject-level -----
   useEffect(() => {
     if (!script) return;
-    const owner = script.paperId ? "paper" : script.subjectId ? "subject" : null;
-    const ownerId = script.paperId ?? script.subjectId;
-    if (!owner || !ownerId) return;
+    const { paperId, subjectId } = script;
+    if (!paperId && !subjectId) return;
     setPaperLoading(true);
-    getOwnerPaperBundle(owner, ownerId)
-      .then(setPaperBundle)
-      .catch((e) => toast.error((e as Error).message))
-      .finally(() => setPaperLoading(false));
+    (async () => {
+      try {
+        if (paperId) {
+          const b = await getOwnerPaperBundle("paper", paperId);
+          if (b.questionPaperUrl || b.markingSchemeUrl || b.markingScheme.length) {
+            setPaperBundle(b); return;
+          }
+        }
+        if (subjectId) {
+          const viaPaper = await getPaperBundleForSubject(subjectId);
+          if (viaPaper && (viaPaper.questionPaperUrl || viaPaper.markingSchemeUrl || viaPaper.markingScheme.length)) {
+            setPaperBundle(viaPaper); return;
+          }
+          setPaperBundle(await getOwnerPaperBundle("subject", subjectId));
+        }
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setPaperLoading(false);
+      }
+    })();
   }, [script?.paperId, script?.subjectId]);
 
   // ----- annotation canvas -----
