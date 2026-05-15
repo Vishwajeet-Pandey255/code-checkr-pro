@@ -58,6 +58,7 @@ export async function readPdfFirstPage(
     // RENDER PDF PAGE
     // =========================
     await page.render({
+      canvas,
       canvasContext: context,
       viewport,
     }).promise;
