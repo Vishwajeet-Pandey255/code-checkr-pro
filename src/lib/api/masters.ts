@@ -263,3 +263,17 @@ export const uploadSubjectMarkingScheme = (id: string, f: File) => uploadOwnerMa
 export const removeSubjectPaper = (id: string, kind: "qp" | "ms") => removeOwnerPaper("subject", id, kind);
 export const saveSubjectMarkingScheme = (id: string, rows: MarkingSchemeRow[]) => saveOwnerMarkingScheme("subject", id, rows);
 export const getSubjectPaperBundle = (id: string) => getOwnerPaperBundle("subject", id);
+
+// Find the most recent question_paper for a subject and return its bundle.
+export async function getPaperBundleForSubject(subjectId: string): Promise<SubjectPaperBundle | null> {
+  const { data, error } = await supabase
+    .from("question_papers")
+    .select("id")
+    .eq("subject_id", subjectId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data?.id) return null;
+  return getOwnerPaperBundle("paper", data.id);
+}
